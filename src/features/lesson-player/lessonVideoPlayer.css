@@ -8,6 +8,7 @@
 .lesson-video-player__error p { margin: 0; color: #fff; font-weight: 700; }
 .lesson-video-player__error button { justify-self: center; border: 1px solid rgb(255 255 255 / 0.4); border-radius: var(--radius-control); padding: 0.5rem 0.85rem; color: #fff; background: transparent; font-weight: 800; }
 .lesson-video-player__error button:hover { background: rgb(255 255 255 / 0.12); }
+.lesson-pager button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 @media (prefers-reduced-motion: reduce) {
   .lesson-video-player .play-button { transition: none; }

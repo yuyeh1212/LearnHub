@@ -26,6 +26,7 @@ export function App() {
         currentLesson={courseProgress.currentLesson}
         lessonPositionSeconds={courseProgress.lessonPositionSeconds}
         onSelectLesson={courseProgress.selectLesson}
+        onCompleteLesson={courseProgress.completeLesson}
         onToggleLessonCompletion={courseProgress.toggleLessonCompletion}
         onSaveLessonPosition={courseProgress.saveLessonPosition}
       />

@@ -72,6 +72,16 @@ export function useCourseProgress() {
     })
   }
 
+  const completeLesson = (lessonId: string) => {
+    setProgress((current) => {
+      if (current.completedLessonIds.includes(lessonId)) {
+        return current
+      }
+
+      return { ...current, completedLessonIds: [...current.completedLessonIds, lessonId] }
+    })
+  }
+
   const saveLessonPosition = (lessonId: string, seconds: number) => {
     setProgress((current) => {
       const positionSeconds = Math.max(0, Math.floor(seconds))
@@ -93,6 +103,7 @@ export function useCourseProgress() {
     lessonPositionSeconds: progress.lessonPositionSeconds ?? {},
     saveLessonPosition,
     selectLesson,
+    completeLesson,
     toggleLessonCompletion,
   }
 }
