@@ -32,10 +32,18 @@ export function LessonPlayerPage({
   const currentLessonIndex = Math.max(reactCourse.lessons.findIndex((lesson) => lesson.id === currentLesson.id), 0)
   const previousLesson = reactCourse.lessons[currentLessonIndex - 1]
   const nextLesson = reactCourse.lessons[currentLessonIndex + 1]
+  const hasCompletedChapter = reactCourse.lessons.every((lesson) => completedLessonIds.includes(lesson.id))
 
   const handleComplete = () => {
+    const willCompleteChapter = !isCurrentLessonComplete && completedLessonIds.length === reactCourse.lessons.length - 1
     onToggleLessonCompletion(currentLesson.id)
-    setNotice(isCurrentLessonComplete ? '已恢復為進行中，首頁進度已同步更新。' : '已標記完成，首頁進度已同步更新。')
+    setNotice(
+      isCurrentLessonComplete
+        ? '已恢復為進行中，首頁進度已同步更新。'
+        : willCompleteChapter
+          ? '太好了！第 8 章已全部完成，學習紀錄已同步更新。'
+          : '已標記完成，首頁進度已同步更新。',
+    )
   }
 
   const handleLessonSelect = (lesson: Lesson) => {
@@ -44,6 +52,7 @@ export function LessonPlayerPage({
   }
 
   const handleVideoEnded = () => {
+    const willCompleteChapter = !isCurrentLessonComplete && completedLessonIds.length === reactCourse.lessons.length - 1
     onCompleteLesson(currentLesson.id)
 
     if (nextLesson) {
@@ -52,7 +61,11 @@ export function LessonPlayerPage({
       return
     }
 
-    setNotice('恭喜完成本章最後一個單元，課程進度已同步更新。')
+    setNotice(
+      willCompleteChapter
+        ? '太好了！第 8 章已全部完成，學習紀錄已同步更新。'
+        : '恭喜完成本章最後一個單元，課程進度已同步更新。',
+    )
   }
 
   return (
@@ -67,6 +80,7 @@ export function LessonPlayerPage({
             <div className="lesson-content">
               <div className="lesson-content__heading"><div><p>{currentLesson.chapter}　·　{currentLesson.durationMinutes} 分鐘 · 影片課程</p><h1 id="lesson-title">{currentLesson.title}</h1></div><Button variant={isCurrentLessonComplete ? 'secondary' : 'primary'} onClick={handleComplete}>{isCurrentLessonComplete ? '已標記完成' : '標記為已完成'}</Button></div>
               {notice && <p className="lesson-notice" role="status">{notice}</p>}
+              {hasCompletedChapter && <section className="chapter-complete" aria-labelledby="chapter-complete-title"><span className="chapter-complete__mark" aria-hidden="true">✓</span><div><p>第 8 章完成</p><h2 id="chapter-complete-title">你已完成所有學習單元</h2><span>學習紀錄已保存，回到我的課程查看下一個安排。</span></div><a href="#home">回到我的課程</a></section>}
               <p className="lesson-content__summary">本單元深入探討 React 18 中的 useEffect 生命週期機制，示範如何安全處理非同步 API 請求、快取策略與 AbortController 競態預防，並封裝成高效的可複用自訂 Hook。</p>
               <section className="points-grid" aria-label="核心學習要點">{learningPoints.map((point) => <article key={point.title}><span aria-hidden="true" /><h2>{point.title}</h2><p>{point.description}</p></article>)}</section>
               <section className="resource-card"><div className="resource-card__file" aria-hidden="true">JS</div><div><h2>章節講義與範例代碼</h2><p>useFetch.ts 範例與完整測試案例（ZIP，3.2 MB）</p></div><button type="button">下載資源包</button></section>
