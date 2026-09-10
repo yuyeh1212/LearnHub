@@ -6,6 +6,29 @@ import { learningPoints, reactCourse, type Lesson } from '../../data/courseData'
 import { LessonVideoPlayer } from './LessonVideoPlayer'
 import './lessonPlayer.css'
 
+const useFetchExample = `import { useEffect, useState } from 'react'
+
+export function useFetch<T>(url: string) {
+  const [data, setData] = useState<T | null>(null)
+  const [error, setError] = useState<Error | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    fetch(url, { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Request failed')))
+      .then((result: T) => setData(result))
+      .catch((requestError: Error) => {
+        if (requestError.name !== 'AbortError') setError(requestError)
+      })
+
+    return () => controller.abort()
+  }, [url])
+
+  return { data, error }
+}
+`
+
 interface LessonPlayerPageProps {
   completion: number
   completedLessonIds: string[]
@@ -68,6 +91,23 @@ export function LessonPlayerPage({
     )
   }
 
+  const handleResourceDownload = () => {
+    try {
+      const resource = new Blob([useFetchExample], { type: 'text/typescript;charset=utf-8' })
+      const resourceUrl = URL.createObjectURL(resource)
+      const downloadLink = document.createElement('a')
+      downloadLink.href = resourceUrl
+      downloadLink.download = 'useFetch.ts'
+      document.body.append(downloadLink)
+      downloadLink.click()
+      downloadLink.remove()
+      URL.revokeObjectURL(resourceUrl)
+      setNotice('範例檔已開始下載。')
+    } catch {
+      setNotice('暫時無法建立範例檔，請稍後再試。')
+    }
+  }
+
   return (
     <div className="lesson-page">
       <a className="skip-link" href="#lesson-content">跳至主要內容</a>
@@ -83,7 +123,7 @@ export function LessonPlayerPage({
               {hasCompletedChapter && <section className="chapter-complete" aria-labelledby="chapter-complete-title"><span className="chapter-complete__mark" aria-hidden="true">✓</span><div><p>第 8 章完成</p><h2 id="chapter-complete-title">你已完成所有學習單元</h2><span>學習紀錄已保存，回到我的課程查看下一個安排。</span></div><a href="#home">回到我的課程</a></section>}
               <p className="lesson-content__summary">本單元深入探討 React 18 中的 useEffect 生命週期機制，示範如何安全處理非同步 API 請求、快取策略與 AbortController 競態預防，並封裝成高效的可複用自訂 Hook。</p>
               <section className="points-grid" aria-label="核心學習要點">{learningPoints.map((point) => <article key={point.title}><span aria-hidden="true" /><h2>{point.title}</h2><p>{point.description}</p></article>)}</section>
-              <section className="resource-card"><div className="resource-card__file" aria-hidden="true">JS</div><div><h2>章節講義與範例代碼</h2><p>useFetch.ts 範例與完整測試案例（ZIP，3.2 MB）</p></div><button type="button">下載資源包</button></section>
+              <section className="resource-card"><div className="resource-card__file" aria-hidden="true">TS</div><div><h2>章節講義與範例代碼</h2><p>useFetch.ts 範例檔（TypeScript，1 KB）</p></div><button type="button" onClick={handleResourceDownload}>下載範例檔</button></section>
               <nav className="lesson-pager" aria-label="單元導覽"><button type="button" disabled={!previousLesson} onClick={() => previousLesson && handleLessonSelect(previousLesson)}>← {previousLesson ? `上一單元：${previousLesson.title}` : '已是第一單元'}</button><button type="button" disabled={!nextLesson} onClick={() => nextLesson && handleLessonSelect(nextLesson)}>{nextLesson ? `下一單元：${nextLesson.title}` : '已是最後單元'} →</button></nav>
             </div>
           </section>
