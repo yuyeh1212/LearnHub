@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { CourseCard } from '../../components/CourseCard'
 import { SiteHeader } from '../../components/SiteHeader'
 import { Button } from '../../components/ui/Button'
@@ -19,11 +20,29 @@ interface LandingPageProps {
 }
 
 export function LandingPage({ completion, currentLesson, currentLessonPositionSeconds }: LandingPageProps) {
+  const [searchQuery, setSearchQuery] = useState('')
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase('zh-TW')
+  const matchingCourses = featuredCourses.filter((course) => [course.category, course.instructor, course.title]
+    .some((value) => value.toLocaleLowerCase('zh-TW').includes(normalizedQuery)))
+
+  const handleSearchSubmit = () => {
+    const results = document.getElementById('featured-course-results')
+    if (!results) {
+      return
+    }
+
+    results.focus({ preventScroll: true })
+    results.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'start',
+    })
+  }
+
   return (
     <div className="landing-page">
       <a className="skip-link" href="#main-content">跳至主要內容</a>
       <div className="landing-shell">
-        <SiteHeader />
+        <SiteHeader searchQuery={searchQuery} searchResults={matchingCourses} onSearchQueryChange={setSearchQuery} onSearchSubmit={handleSearchSubmit} />
         <main id="main-content">
           <section className="hero" aria-labelledby="hero-title">
             <div className="hero__content">
@@ -75,7 +94,8 @@ export function LandingPage({ completion, currentLesson, currentLessonPositionSe
               <div><p className="eyebrow">精選課程</p><h2 id="courses-title">用真實工作情境，把能力練得更扎實</h2></div>
               <a href="#explore">探索課程目錄 →</a>
             </div>
-            <div className="course-grid">{featuredCourses.map((course) => <CourseCard key={course.id} course={course} />)}</div>
+            {normalizedQuery && <p className="course-search-status" role="status">{matchingCourses.length ? `找到 ${matchingCourses.length} 門與「${searchQuery.trim()}」相關的課程。` : `找不到與「${searchQuery.trim()}」相關的課程。`}</p>}
+            <div aria-labelledby="courses-title" className="course-grid" id="featured-course-results" tabIndex={-1}>{matchingCourses.length ? matchingCourses.map((course) => <CourseCard key={course.id} course={course} />) : <div className="course-search-empty"><h3>沒有符合的課程</h3><p>試試看搜尋 React、資料分析或 UX。</p></div>}</div>
           </section>
 
           <section className="cohort-section" aria-labelledby="cohort-title">
