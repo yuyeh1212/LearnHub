@@ -3,6 +3,7 @@ import { SiteHeader } from '../../components/SiteHeader'
 import { Button } from '../../components/ui/Button'
 import { ProgressBar } from '../../components/ui/ProgressBar'
 import { featuredCourses, type Lesson } from '../../data/courseData'
+import { formatPlaybackTime } from '../learning/formatPlaybackTime'
 import './landing.css'
 
 const paths = [
@@ -14,9 +15,10 @@ const paths = [
 interface LandingPageProps {
   completion: number
   currentLesson: Lesson
+  currentLessonPositionSeconds: number
 }
 
-export function LandingPage({ completion, currentLesson }: LandingPageProps) {
+export function LandingPage({ completion, currentLesson, currentLessonPositionSeconds }: LandingPageProps) {
   return (
     <div className="landing-page">
       <a className="skip-link" href="#main-content">跳至主要內容</a>
@@ -61,7 +63,7 @@ export function LandingPage({ completion, currentLesson }: LandingPageProps) {
               <div className="continue-card__main">
                 <p>React 全端工程師培養課程 <span>第 8 章</span></p>
                 <h3>{currentLesson.title}</h3>
-                <p className="continue-card__caption">下一個單元約需 {currentLesson.durationMinutes} 分鐘完成。</p>
+                <p className="continue-card__caption">已觀看 {formatPlaybackTime(currentLessonPositionSeconds)}，本單元約 {currentLesson.durationMinutes} 分鐘。</p>
               </div>
               <div className="continue-card__progress"><span>{completion}% 完成度</span><ProgressBar value={completion} label={`課程完成進度 ${completion}%`} /></div>
               <a href="#lesson"><Button>繼續學習</Button></a>

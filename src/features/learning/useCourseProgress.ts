@@ -7,6 +7,19 @@ const defaultCompletedLessonIds = ['8-1']
 interface StoredCourseProgress {
   completedLessonIds: string[]
   currentLessonId: string
+  lessonPositionSeconds: Record<string, number>
+}
+
+function readLessonPositions(value: unknown, lessonIds: Set<string>) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {}
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter(([lessonId, seconds]) =>
+      lessonIds.has(lessonId) && typeof seconds === 'number' && Number.isFinite(seconds) && seconds >= 0,
+    ).map(([lessonId, seconds]) => [lessonId, Math.floor(seconds as number)]),
+  )
 }
 
 function readStoredProgress(): StoredCourseProgress {
@@ -15,7 +28,7 @@ function readStoredProgress(): StoredCourseProgress {
   try {
     const storedValue = window.localStorage.getItem(STORAGE_KEY)
     if (!storedValue) {
-      return { completedLessonIds: defaultCompletedLessonIds, currentLessonId: '8-2' }
+      return { completedLessonIds: defaultCompletedLessonIds, currentLessonId: '8-2', lessonPositionSeconds: {} }
     }
 
     const storedProgress: unknown = JSON.parse(storedValue)
@@ -23,15 +36,16 @@ function readStoredProgress(): StoredCourseProgress {
       throw new Error('Invalid stored course progress')
     }
 
-    const { completedLessonIds, currentLessonId } = storedProgress as Partial<StoredCourseProgress>
+    const { completedLessonIds, currentLessonId, lessonPositionSeconds } = storedProgress as Partial<StoredCourseProgress>
     return {
       completedLessonIds: Array.isArray(completedLessonIds)
         ? completedLessonIds.filter((lessonId): lessonId is string => typeof lessonId === 'string' && lessonIds.has(lessonId))
         : defaultCompletedLessonIds,
       currentLessonId: typeof currentLessonId === 'string' && lessonIds.has(currentLessonId) ? currentLessonId : '8-2',
+      lessonPositionSeconds: readLessonPositions(lessonPositionSeconds, lessonIds),
     }
   } catch {
-    return { completedLessonIds: defaultCompletedLessonIds, currentLessonId: '8-2' }
+    return { completedLessonIds: defaultCompletedLessonIds, currentLessonId: '8-2', lessonPositionSeconds: {} }
   }
 }
 
@@ -58,10 +72,26 @@ export function useCourseProgress() {
     })
   }
 
+  const saveLessonPosition = (lessonId: string, seconds: number) => {
+    setProgress((current) => {
+      const positionSeconds = Math.max(0, Math.floor(seconds))
+      if (current.lessonPositionSeconds[lessonId] === positionSeconds) {
+        return current
+      }
+
+      return {
+        ...current,
+        lessonPositionSeconds: { ...current.lessonPositionSeconds, [lessonId]: positionSeconds },
+      }
+    })
+  }
+
   return {
     completion,
     completedLessonIds: progress.completedLessonIds,
     currentLesson,
+    lessonPositionSeconds: progress.lessonPositionSeconds ?? {},
+    saveLessonPosition,
     selectLesson,
     toggleLessonCompletion,
   }

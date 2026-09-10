@@ -3,24 +3,28 @@ import { SiteHeader } from '../../components/SiteHeader'
 import { Button } from '../../components/ui/Button'
 import { ProgressBar } from '../../components/ui/ProgressBar'
 import { learningPoints, reactCourse, type Lesson } from '../../data/courseData'
+import { LessonVideoPlayer } from './LessonVideoPlayer'
 import './lessonPlayer.css'
 
 interface LessonPlayerPageProps {
   completion: number
   completedLessonIds: string[]
   currentLesson: Lesson
+  lessonPositionSeconds: Record<string, number>
   onSelectLesson: (lessonId: string) => void
   onToggleLessonCompletion: (lessonId: string) => void
+  onSaveLessonPosition: (lessonId: string, seconds: number) => void
 }
 
 export function LessonPlayerPage({
   completion,
   completedLessonIds,
   currentLesson,
+  lessonPositionSeconds = {},
   onSelectLesson,
   onToggleLessonCompletion,
+  onSaveLessonPosition,
 }: LessonPlayerPageProps) {
-  const [isPlaying, setIsPlaying] = useState(false)
   const [notice, setNotice] = useState('')
   const isCurrentLessonComplete = completedLessonIds.includes(currentLesson.id)
 
@@ -31,7 +35,6 @@ export function LessonPlayerPage({
 
   const handleLessonSelect = (lesson: Lesson) => {
     onSelectLesson(lesson.id)
-    setIsPlaying(false)
     setNotice(`已切換至 ${lesson.id} ${lesson.title}。`)
   }
 
@@ -43,13 +46,7 @@ export function LessonPlayerPage({
         <nav className="breadcrumbs" aria-label="麵包屑"><a href="#home">我的課程</a><span>/</span><a href="#home">React 全端工程師培養課程</a><span>/</span><span>第 8 章</span></nav>
         <div className="lesson-layout">
           <section className="lesson-main" aria-labelledby="lesson-title">
-            <div className={`player ${isPlaying ? 'player--playing' : ''}`}>
-              <div className="player__top"><span>LESSON {currentLesson.id}</span><span>React 18 Architecture Masterclass</span></div>
-              <div className="code-window" aria-hidden="true"><div className="code-window__bar" /><code>useEffect(() =&gt; {'{'}<br />&nbsp;&nbsp;const controller = new AbortController();<br />&nbsp;&nbsp;fetchData({'{'} signal: controller.signal {'}'});<br />&nbsp;&nbsp;return () =&gt; controller.abort();<br />{'}'}, [endpoint]);</code></div>
-              <div className="mentor-card"><div className="mentor-card__glow" /><span>講師引導</span><strong>Sophia</strong></div>
-              <button className="play-button" type="button" aria-label={isPlaying ? '暫停影片' : '播放影片'} onClick={() => setIsPlaying((playing) => !playing)}><i /></button>
-              <div className="player__controls"><div className="player__timeline"><span style={{ width: isPlaying ? '52%' : '42%' }} /></div><div><span>{isPlaying ? '07:52' : '06:42'} / 15:20</span><span>1.25x　1080p</span></div></div>
-            </div>
+            <LessonVideoPlayer lesson={currentLesson} savedPositionSeconds={lessonPositionSeconds[currentLesson.id] ?? 0} onPositionChange={(seconds) => onSaveLessonPosition(currentLesson.id, seconds)} />
             <div className="lesson-content">
               <div className="lesson-content__heading"><div><p>{currentLesson.chapter}　·　{currentLesson.durationMinutes} 分鐘 · 影片課程</p><h1 id="lesson-title">{currentLesson.title}</h1></div><Button variant={isCurrentLessonComplete ? 'secondary' : 'primary'} onClick={handleComplete}>{isCurrentLessonComplete ? '已標記完成' : '標記為已完成'}</Button></div>
               {notice && <p className="lesson-notice" role="status">{notice}</p>}

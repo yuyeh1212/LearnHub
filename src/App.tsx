@@ -24,8 +24,14 @@ export function App() {
         completion={courseProgress.completion}
         completedLessonIds={courseProgress.completedLessonIds}
         currentLesson={courseProgress.currentLesson}
+        lessonPositionSeconds={courseProgress.lessonPositionSeconds}
         onSelectLesson={courseProgress.selectLesson}
         onToggleLessonCompletion={courseProgress.toggleLessonCompletion}
+        onSaveLessonPosition={courseProgress.saveLessonPosition}
       />
-    : <LandingPage completion={courseProgress.completion} currentLesson={courseProgress.currentLesson} />
+    : <LandingPage
+        completion={courseProgress.completion}
+        currentLesson={courseProgress.currentLesson}
+        currentLessonPositionSeconds={courseProgress.lessonPositionSeconds[courseProgress.currentLesson.id] ?? 0}
+      />
 }
