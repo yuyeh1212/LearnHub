@@ -2,7 +2,7 @@ import { CourseCard } from '../../components/CourseCard'
 import { SiteHeader } from '../../components/SiteHeader'
 import { Button } from '../../components/ui/Button'
 import { ProgressBar } from '../../components/ui/ProgressBar'
-import { featuredCourses } from '../../data/courseData'
+import { featuredCourses, type Lesson } from '../../data/courseData'
 import './landing.css'
 
 const paths = [
@@ -11,7 +11,12 @@ const paths = [
   { number: '03', title: 'UX 設計師', description: '用研究、流程與原型，讓設計真正改變產品體驗。', skills: ['UX Research', 'Figma', 'Design Systems'] },
 ]
 
-export function LandingPage() {
+interface LandingPageProps {
+  completion: number
+  currentLesson: Lesson
+}
+
+export function LandingPage({ completion, currentLesson }: LandingPageProps) {
   return (
     <div className="landing-page">
       <a className="skip-link" href="#main-content">跳至主要內容</a>
@@ -39,10 +44,10 @@ export function LandingPage() {
               </div>
               <div className="hero-map__lesson">
                 <div className="lesson-signal" aria-hidden="true"><i /><i /><i /><i /></div>
-                <div><small>正在進行</small><strong>React 全端工程師培養課程</strong></div>
+                <div><small>正在進行</small><strong>{currentLesson.title}</strong></div>
                 <a href="#lesson">繼續</a>
               </div>
-              <ProgressBar value={42} label="React 課程完成進度 42%" size="small" />
+              <ProgressBar value={completion} label={`React 課程完成進度 ${completion}%`} size="small" />
             </div>
           </section>
 
@@ -55,10 +60,10 @@ export function LandingPage() {
               <div className="continue-card__signal" aria-hidden="true"><span /><span /><span /></div>
               <div className="continue-card__main">
                 <p>React 全端工程師培養課程 <span>第 8 章</span></p>
-                <h3>useEffect 與 API 整合</h3>
-                <p className="continue-card__caption">上次學習於今天 10:42，還有 8 分鐘完成本單元。</p>
+                <h3>{currentLesson.title}</h3>
+                <p className="continue-card__caption">下一個單元約需 {currentLesson.durationMinutes} 分鐘完成。</p>
               </div>
-              <div className="continue-card__progress"><span>42% 完成度</span><ProgressBar value={42} label="課程完成進度 42%" /></div>
+              <div className="continue-card__progress"><span>{completion}% 完成度</span><ProgressBar value={completion} label={`課程完成進度 ${completion}%`} /></div>
               <a href="#lesson"><Button>繼續學習</Button></a>
             </article>
           </section>
