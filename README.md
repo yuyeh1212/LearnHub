@@ -19,3 +19,4 @@ LearnHub 的 React + Vite 前端雛型，包含 Landing 與 Lesson Player。
 - Landing 與 Lesson Player 目前仍使用前端範例資料；課程、登入與影片串流尚未串接。
 - PostgreSQL schema 已定義在 `db/migrations/0001_learning_core.sql`，但尚未對任何資料庫執行。
 - 學習資料與 API 契約請見 `docs/learning-api-v1.md`；資料庫設定說明請見 `docs/database-setup.md`。
+- 登入 API 已提供註冊、登入與目前使用者端點；規格與本機啟動方式請見 `docs/auth-api-v1.md`。
