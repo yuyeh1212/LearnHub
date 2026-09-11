@@ -24,6 +24,11 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 
 #root { min-height: 100vh; }
 
+.app-data-state { width: min(100% - 2rem, 680px); margin: 12vh auto; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); box-shadow: var(--shadow-card); text-align: center; }
+.app-data-state h1 { margin: 0; font-family: var(--font-display); font-size: 1.6rem; }
+.app-data-state p { color: var(--color-text-secondary); }
+.app-data-state button, .app-data-state a { display: inline-block; margin: var(--space-3) var(--space-2) 0; border: 0; color: var(--color-primary); background: transparent; font: inherit; font-weight: 800; }
+
 .skip-link {
   position: fixed;
   top: 0.75rem;

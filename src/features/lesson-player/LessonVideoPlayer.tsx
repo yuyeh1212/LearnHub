@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Lesson } from '../../data/courseData'
+import type { LessonDetail } from '../../contracts/learning'
 import { formatPlaybackTime } from '../learning/formatPlaybackTime'
 import './lessonVideoPlayer.css'
 
 interface LessonVideoPlayerProps {
-  lesson: Lesson
+  lesson: Pick<LessonDetail, 'id' | 'title' | 'videoUrl'>
   savedPositionSeconds: number
   onEnded: () => void
   onPositionChange: (seconds: number) => void

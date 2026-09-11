@@ -1,6 +1,6 @@
 # LearnHub 學習資料模型與 API v1
 
-這份契約先定義產品資料的責任邊界；尚未建立資料庫或啟動後端服務。
+這份契約定義產品資料的責任邊界。公開課程目錄、課程大綱與單元內容已由 Express API 實作；使用前需完成本機資料庫 migration 與連線設定。
 
 ## 產品資料模型
 
@@ -81,7 +81,6 @@ users ──< enrollments >── courses ──< chapters ──< lessons ─�
 
 ## 前端銜接順序
 
-1. 以 `src/contracts/learning.ts` 的型別取代目前畫面專用的靜態型別。
-2. 建立 API client，先串接課程目錄、課程大綱與單元內容。
-3. 登入完成後，將 `localStorage` 的進度遷移為 `GET`／`PUT` 進度 API。
-4. 最後接影音與資源儲存服務的授權 URL。
+1. 已以 `src/contracts/learning.ts` 的型別建立 API client，首頁與播放器已串接課程目錄、課程大綱與單元內容。
+2. 登入畫面完成後，將播放器的暫存進度換成 `GET`／`PUT` 進度 API。
+3. 最後接影音與資源儲存服務的授權 URL。

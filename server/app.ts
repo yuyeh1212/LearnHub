@@ -5,6 +5,8 @@ import type { AppConfig } from './config.js'
 import { createAuthRouter } from './auth/auth.router.js'
 import { PostgresAuthRepository } from './auth/auth.repository.js'
 import { ProblemError, problemHandler, requestContext } from './http/problem.js'
+import { LearningRepository } from './learning/learning.repository.js'
+import { createLearningRouter } from './learning/learning.router.js'
 
 type AppDependencies = Pick<AppConfig, 'corsOrigin' | 'jwtSecret'> & {
   pool: Pool
@@ -21,6 +23,11 @@ export function createApp({ pool, corsOrigin, jwtSecret }: AppDependencies) {
   app.get('/health', (_request, response) => {
     response.status(200).json({ status: 'ok' })
   })
+
+  const learningRepository = new LearningRepository(pool)
+  const { coursesRouter, lessonsRouter } = createLearningRouter(learningRepository)
+  app.use('/api/v1/courses', coursesRouter)
+  app.use('/api/v1/lessons', lessonsRouter)
 
   app.use('/api/v1/auth', createAuthRouter({
     repository: new PostgresAuthRepository(pool),

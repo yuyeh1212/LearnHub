@@ -25,3 +25,9 @@ LearnHub 使用 PostgreSQL。初始結構定義於 `db/migrations/0001_learning_
 ## 尚未執行 migration 的原因
 
 目前尚未確認任何資料庫環境、備份狀態或連線設定，因此沒有自動執行 migration。正式環境套用前應先確認備份或時間點還原（PITR）、檢視實際 SQL，並安排以新的 forward migration 修正問題，而不是依賴 down migration。
+
+## 本機展示資料
+
+`db/seeds/local-demo-content.sql` 只供本機開發展示課程目錄與播放器。它不含帳號、密碼或選課紀錄，也不應套用到正式環境。要讓首頁與播放器取得資料，請先在本機資料庫完成 initial migration，再視需要執行此種子檔。
+
+執行本機 API 時，`.env` 的 `VITE_API_BASE_URL` 可維持為 `http://127.0.0.1:3001/api/v1`。它是瀏覽器可見的公開設定，只能放 API 位址，不能放 JWT、資料庫帳密或其他私密資訊。

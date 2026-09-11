@@ -1,111 +1,59 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import type { CourseDetail, CourseOutlineChapter, LessonDetail, LessonSummary } from '../../contracts/learning'
 import { SiteHeader } from '../../components/SiteHeader'
 import { Button } from '../../components/ui/Button'
 import { ProgressBar } from '../../components/ui/ProgressBar'
-import { learningPoints, reactCourse, type Lesson } from '../../data/courseData'
+import { formatPlaybackTime } from '../learning/formatPlaybackTime'
 import { LessonVideoPlayer } from './LessonVideoPlayer'
+import { useLessonPlaybackSession } from './useLessonPlaybackSession'
 import './lessonPlayer.css'
 
-const useFetchExample = `import { useEffect, useState } from 'react'
-
-export function useFetch<T>(url: string) {
-  const [data, setData] = useState<T | null>(null)
-  const [error, setError] = useState<Error | null>(null)
-
-  useEffect(() => {
-    const controller = new AbortController()
-
-    fetch(url, { signal: controller.signal })
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Request failed')))
-      .then((result: T) => setData(result))
-      .catch((requestError: Error) => {
-        if (requestError.name !== 'AbortError') setError(requestError)
-      })
-
-    return () => controller.abort()
-  }, [url])
-
-  return { data, error }
-}
-`
+type OutlineLesson = LessonSummary & { chapterTitle: string }
 
 interface LessonPlayerPageProps {
-  completion: number
-  completedLessonIds: string[]
-  currentLesson: Lesson
-  lessonPositionSeconds: Record<string, number>
+  course: CourseDetail
+  chapters: CourseOutlineChapter[]
+  currentLesson: LessonDetail
   onSelectLesson: (lessonId: string) => void
-  onCompleteLesson: (lessonId: string) => void
-  onToggleLessonCompletion: (lessonId: string) => void
-  onSaveLessonPosition: (lessonId: string, seconds: number) => void
 }
 
-export function LessonPlayerPage({
-  completion,
-  completedLessonIds,
-  currentLesson,
-  lessonPositionSeconds = {},
-  onSelectLesson,
-  onCompleteLesson,
-  onToggleLessonCompletion,
-  onSaveLessonPosition,
-}: LessonPlayerPageProps) {
-  const [notice, setNotice] = useState('')
-  const isCurrentLessonComplete = completedLessonIds.includes(currentLesson.id)
-  const currentLessonIndex = Math.max(reactCourse.lessons.findIndex((lesson) => lesson.id === currentLesson.id), 0)
-  const previousLesson = reactCourse.lessons[currentLessonIndex - 1]
-  const nextLesson = reactCourse.lessons[currentLessonIndex + 1]
-  const hasCompletedChapter = reactCourse.lessons.every((lesson) => completedLessonIds.includes(lesson.id))
+function formatDuration(seconds: number) {
+  return `${Math.max(1, Math.round(seconds / 60))} 分鐘`
+}
 
-  const handleComplete = () => {
-    const willCompleteChapter = !isCurrentLessonComplete && completedLessonIds.length === reactCourse.lessons.length - 1
-    onToggleLessonCompletion(currentLesson.id)
-    setNotice(
-      isCurrentLessonComplete
-        ? '已恢復為進行中，首頁進度已同步更新。'
-        : willCompleteChapter
-          ? '太好了！第 8 章已全部完成，學習紀錄已同步更新。'
-          : '已標記完成，首頁進度已同步更新。',
-    )
+function getResourceKindLabel(kind: LessonDetail['resources'][number]['kind']) {
+  return kind === 'code' ? '程式碼' : kind === 'document' ? '講義' : '練習題'
+}
+
+export function LessonPlayerPage({ course, chapters, currentLesson, onSelectLesson }: LessonPlayerPageProps) {
+  const [notice, setNotice] = useState('')
+  const outlineLessons = useMemo<OutlineLesson[]>(() => chapters.flatMap((chapter) => chapter.lessons.map((lesson) => ({ ...lesson, chapterTitle: chapter.title }))), [chapters])
+  const playback = useLessonPlaybackSession(outlineLessons.map((lesson) => lesson.id))
+  const currentLessonIndex = Math.max(outlineLessons.findIndex((lesson) => lesson.id === currentLesson.id), 0)
+  const previousLesson = outlineLessons[currentLessonIndex - 1]
+  const nextLesson = outlineLessons[currentLessonIndex + 1]
+  const currentOutlineLesson = outlineLessons[currentLessonIndex]
+  const completion = outlineLessons.length ? Math.round((playback.completedLessonIds.length / outlineLessons.length) * 100) : 0
+  const isCurrentLessonComplete = playback.completedLessonIds.includes(currentLesson.id)
+
+  const selectLesson = (lessonId: string) => {
+    playback.selectLesson(lessonId)
+    onSelectLesson(lessonId)
   }
 
-  const handleLessonSelect = (lesson: Lesson) => {
-    onSelectLesson(lesson.id)
-    setNotice(`已切換至 ${lesson.id} ${lesson.title}。`)
+  const handleComplete = () => {
+    playback.toggleLessonCompletion(currentLesson.id)
+    setNotice(isCurrentLessonComplete ? '已恢復為進行中。登入後可將進度同步到所有裝置。' : '已標記完成。登入後可將進度同步到所有裝置。')
   }
 
   const handleVideoEnded = () => {
-    const willCompleteChapter = !isCurrentLessonComplete && completedLessonIds.length === reactCourse.lessons.length - 1
-    onCompleteLesson(currentLesson.id)
-
+    playback.completeLesson(currentLesson.id)
     if (nextLesson) {
-      onSelectLesson(nextLesson.id)
+      selectLesson(nextLesson.id)
       setNotice(`已完成 ${currentLesson.title}，已切換至下一單元：${nextLesson.title}。`)
       return
     }
-
-    setNotice(
-      willCompleteChapter
-        ? '太好了！第 8 章已全部完成，學習紀錄已同步更新。'
-        : '恭喜完成本章最後一個單元，課程進度已同步更新。',
-    )
-  }
-
-  const handleResourceDownload = () => {
-    try {
-      const resource = new Blob([useFetchExample], { type: 'text/typescript;charset=utf-8' })
-      const resourceUrl = URL.createObjectURL(resource)
-      const downloadLink = document.createElement('a')
-      downloadLink.href = resourceUrl
-      downloadLink.download = 'useFetch.ts'
-      document.body.append(downloadLink)
-      downloadLink.click()
-      downloadLink.remove()
-      URL.revokeObjectURL(resourceUrl)
-      setNotice('範例檔已開始下載。')
-    } catch {
-      setNotice('暫時無法建立範例檔，請稍後再試。')
-    }
+    setNotice('恭喜完成本課程最後一個單元。登入後可保存完整學習紀錄。')
   }
 
   return (
@@ -113,25 +61,22 @@ export function LessonPlayerPage({
       <a className="skip-link" href="#lesson-content">跳至主要內容</a>
       <SiteHeader mode="player" />
       <main id="lesson-content" className="lesson-shell">
-        <nav className="breadcrumbs" aria-label="麵包屑"><a href="#home">我的課程</a><span>/</span><a href="#home">React 全端工程師培養課程</a><span>/</span><span>第 8 章</span></nav>
+        <nav className="breadcrumbs" aria-label="麵包屑"><a href="#home">探索課程</a><span>/</span><a href="#home">{course.title}</a><span>/</span><span>{currentOutlineLesson?.chapterTitle}</span></nav>
         <div className="lesson-layout">
           <section className="lesson-main" aria-labelledby="lesson-title">
-            <LessonVideoPlayer lesson={currentLesson} savedPositionSeconds={lessonPositionSeconds[currentLesson.id] ?? 0} onEnded={handleVideoEnded} onPositionChange={(seconds) => onSaveLessonPosition(currentLesson.id, seconds)} />
+            <LessonVideoPlayer lesson={currentLesson} savedPositionSeconds={playback.lessonPositionSeconds[currentLesson.id] ?? 0} onEnded={handleVideoEnded} onPositionChange={(seconds) => playback.saveLessonPosition(currentLesson.id, seconds)} />
             <div className="lesson-content">
-              <div className="lesson-content__heading"><div><p>{currentLesson.chapter}　·　{currentLesson.durationMinutes} 分鐘 · 影片課程</p><h1 id="lesson-title">{currentLesson.title}</h1></div><Button variant={isCurrentLessonComplete ? 'secondary' : 'primary'} onClick={handleComplete}>{isCurrentLessonComplete ? '已標記完成' : '標記為已完成'}</Button></div>
+              <div className="lesson-content__heading"><div><p>{currentOutlineLesson?.chapterTitle}　·　{formatDuration(currentLesson.durationSeconds)} · 影片課程</p><h1 id="lesson-title">{currentLesson.title}</h1></div><Button variant={isCurrentLessonComplete ? 'secondary' : 'primary'} onClick={handleComplete}>{isCurrentLessonComplete ? '已標記完成' : '標記為已完成'}</Button></div>
               {notice && <p className="lesson-notice" role="status">{notice}</p>}
-              {hasCompletedChapter && <section className="chapter-complete" aria-labelledby="chapter-complete-title"><span className="chapter-complete__mark" aria-hidden="true">✓</span><div><p>第 8 章完成</p><h2 id="chapter-complete-title">你已完成所有學習單元</h2><span>學習紀錄已保存，回到我的課程查看下一個安排。</span></div><a href="#home">回到我的課程</a></section>}
-              <p className="lesson-content__summary">本單元深入探討 React 18 中的 useEffect 生命週期機制，示範如何安全處理非同步 API 請求、快取策略與 AbortController 競態預防，並封裝成高效的可複用自訂 Hook。</p>
-              <section className="points-grid" aria-label="核心學習要點">{learningPoints.map((point) => <article key={point.title}><span aria-hidden="true" /><h2>{point.title}</h2><p>{point.description}</p></article>)}</section>
-              <section className="resource-card"><div className="resource-card__file" aria-hidden="true">TS</div><div><h2>章節講義與範例代碼</h2><p>useFetch.ts 範例檔（TypeScript，1 KB）</p></div><button type="button" onClick={handleResourceDownload}>下載範例檔</button></section>
-              <nav className="lesson-pager" aria-label="單元導覽"><button type="button" disabled={!previousLesson} onClick={() => previousLesson && handleLessonSelect(previousLesson)}>← {previousLesson ? `上一單元：${previousLesson.title}` : '已是第一單元'}</button><button type="button" disabled={!nextLesson} onClick={() => nextLesson && handleLessonSelect(nextLesson)}>{nextLesson ? `下一單元：${nextLesson.title}` : '已是最後單元'} →</button></nav>
+              <p className="lesson-content__summary">{currentLesson.description}</p>
+              {currentLesson.resources.length > 0 && <section className="resource-list" aria-label="本單元教材">{currentLesson.resources.map((resource) => <article className="resource-card" key={resource.id}><div className="resource-card__file" aria-hidden="true">{resource.kind === 'code' ? 'TS' : 'PDF'}</div><div><h2>{resource.title}</h2><p>{getResourceKindLabel(resource.kind)}{resource.sizeBytes ? `，${Math.ceil(resource.sizeBytes / 1024)} KB` : ''}</p></div><a href={resource.downloadUrl} target="_blank" rel="noopener noreferrer">下載教材</a></article>)}</section>}
+              <nav className="lesson-pager" aria-label="單元導覽"><button type="button" disabled={!previousLesson} onClick={() => previousLesson && selectLesson(previousLesson.id)}>← {previousLesson ? `上一單元：${previousLesson.title}` : '已是第一單元'}</button><button type="button" disabled={!nextLesson} onClick={() => nextLesson && selectLesson(nextLesson.id)}>{nextLesson ? `下一單元：${nextLesson.title}` : '已是最後單元'} →</button></nav>
             </div>
           </section>
           <aside className="course-outline" aria-label="課程大綱">
-            <div className="course-outline__head"><div><p>課程大綱目錄</p><h2>React 全端實戰課程</h2></div><span>{completion}% 完成度</span></div>
-            <ProgressBar value={completion} label={`課程完成進度 ${completion}%`} size="small" />
-            <div className="outline-chapter"><div className="outline-chapter__title"><span>{reactCourse.chapter}</span><span>{reactCourse.lessons.length} 單元</span></div>{reactCourse.lessons.map((lesson) => { const isActive = lesson.id === currentLesson.id; const isComplete = completedLessonIds.includes(lesson.id); return <button type="button" aria-current={isActive ? 'step' : undefined} className={`outline-lesson${isComplete ? ' outline-lesson--done' : ''}${isActive ? ' outline-lesson--active' : ''}`} key={lesson.id} onClick={() => handleLessonSelect(lesson)}><span className="outline-lesson__mark" aria-hidden="true" /> <span>{lesson.id} {lesson.title}</span><time>{lesson.duration}</time></button> })}</div>
-            <button type="button" className="collapsed-chapter">第 9 章：客製化 Hook 架構設計 <span>⌄</span></button>
+            <div className="course-outline__head"><div><p>課程大綱目錄</p><h2>{course.title}</h2></div><span>{completion}% 完成度</span></div>
+            <ProgressBar value={completion} label={`本次學習完成進度 ${completion}%`} size="small" />
+            {chapters.map((chapter) => <div className="outline-chapter" key={chapter.id}><div className="outline-chapter__title"><span>{chapter.title}</span><span>{chapter.lessons.length} 單元</span></div>{chapter.lessons.map((lesson) => { const isActive = lesson.id === currentLesson.id; const isComplete = playback.completedLessonIds.includes(lesson.id); return <button type="button" aria-current={isActive ? 'step' : undefined} className={`outline-lesson${isComplete ? ' outline-lesson--done' : ''}${isActive ? ' outline-lesson--active' : ''}`} key={lesson.id} onClick={() => selectLesson(lesson.id)}><span className="outline-lesson__mark" aria-hidden="true" /><span>{lesson.position} {lesson.title}</span><time>{formatPlaybackTime(lesson.durationSeconds)}</time></button> })}</div>)}
           </aside>
         </div>
       </main>
