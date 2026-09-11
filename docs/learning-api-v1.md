@@ -13,6 +13,7 @@
 | `lesson_resources` | 單元附件，例如程式碼與講義 | 屬於一個單元，下載 URL 由儲存服務產生。 |
 | `enrollments` | 使用者選修某門課的紀錄 | `user_id + course_id` 必須唯一。 |
 | `lesson_progress` | 使用者在一個單元的觀看位置與完成時間 | `user_id + lesson_id` 必須唯一；`position_seconds >= 0`。 |
+| `course_learning_states` | 使用者在一門課最後停留的單元 | `user_id + course_id` 必須唯一；單元歸屬由 API 驗證。 |
 
 `CourseProgress` 是 API 回傳的彙總資料，不建立重複的完成百分比欄位。完成百分比應由 `lesson_progress.completed_at` 和課程單元總數即時計算，避免資料不同步。
 
@@ -82,5 +83,5 @@ users ──< enrollments >── courses ──< chapters ──< lessons ─�
 ## 前端銜接順序
 
 1. 已以 `src/contracts/learning.ts` 的型別建立 API client，首頁與播放器已串接課程目錄、課程大綱與單元內容。
-2. 登入畫面完成後，將播放器的暫存進度換成 `GET`／`PUT` 進度 API。
+2. 登入後，播放器會先要求選修，再以 `GET`／`PATCH`／`PUT` 進度 API 同步觀看位置、完成狀態與目前單元。
 3. 最後接影音與資源儲存服務的授權 URL。

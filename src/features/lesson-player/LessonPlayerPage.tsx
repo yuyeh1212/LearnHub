@@ -1,20 +1,27 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { AuthenticatedUser } from '../../contracts/auth'
 import type { CourseDetail, CourseOutlineChapter, LessonDetail, LessonSummary } from '../../contracts/learning'
 import { SiteHeader } from '../../components/SiteHeader'
 import { Button } from '../../components/ui/Button'
 import { ProgressBar } from '../../components/ui/ProgressBar'
 import { formatPlaybackTime } from '../learning/formatPlaybackTime'
 import { LessonVideoPlayer } from './LessonVideoPlayer'
-import { useLessonPlaybackSession } from './useLessonPlaybackSession'
+import { useCourseLearningProgress } from './useCourseLearningProgress'
 import './lessonPlayer.css'
 
 type OutlineLesson = LessonSummary & { chapterTitle: string }
 
 interface LessonPlayerPageProps {
+  accessToken: string | null
+  authUser: AuthenticatedUser | null
   course: CourseDetail
   chapters: CourseOutlineChapter[]
   currentLesson: LessonDetail
+  onRegister: () => void
+  onRequestAuthentication: () => void
   onSelectLesson: (lessonId: string) => void
+  onSignIn: () => void
+  onSignOut: () => void
 }
 
 function formatDuration(seconds: number) {
@@ -25,10 +32,10 @@ function getResourceKindLabel(kind: LessonDetail['resources'][number]['kind']) {
   return kind === 'code' ? '程式碼' : kind === 'document' ? '講義' : '練習題'
 }
 
-export function LessonPlayerPage({ course, chapters, currentLesson, onSelectLesson }: LessonPlayerPageProps) {
+export function LessonPlayerPage({ accessToken, authUser, course, chapters, currentLesson, onRegister, onRequestAuthentication, onSelectLesson, onSignIn, onSignOut }: LessonPlayerPageProps) {
   const [notice, setNotice] = useState('')
   const outlineLessons = useMemo<OutlineLesson[]>(() => chapters.flatMap((chapter) => chapter.lessons.map((lesson) => ({ ...lesson, chapterTitle: chapter.title }))), [chapters])
-  const playback = useLessonPlaybackSession(outlineLessons.map((lesson) => lesson.id))
+  const playback = useCourseLearningProgress(course.id, outlineLessons.map((lesson) => lesson.id), accessToken)
   const currentLessonIndex = Math.max(outlineLessons.findIndex((lesson) => lesson.id === currentLesson.id), 0)
   const previousLesson = outlineLessons[currentLessonIndex - 1]
   const nextLesson = outlineLessons[currentLessonIndex + 1]
@@ -36,36 +43,47 @@ export function LessonPlayerPage({ course, chapters, currentLesson, onSelectLess
   const completion = outlineLessons.length ? Math.round((playback.completedLessonIds.length / outlineLessons.length) * 100) : 0
   const isCurrentLessonComplete = playback.completedLessonIds.includes(currentLesson.id)
 
+  useEffect(() => {
+    if (playback.currentLessonId && playback.currentLessonId !== currentLesson.id) {
+      onSelectLesson(playback.currentLessonId)
+    }
+  }, [currentLesson.id, onSelectLesson, playback.currentLessonId])
+
   const selectLesson = (lessonId: string) => {
     playback.selectLesson(lessonId)
     onSelectLesson(lessonId)
   }
 
   const handleComplete = () => {
-    playback.toggleLessonCompletion(currentLesson.id)
-    setNotice(isCurrentLessonComplete ? '已恢復為進行中。登入後可將進度同步到所有裝置。' : '已標記完成。登入後可將進度同步到所有裝置。')
+    playback.setLessonCompletion(currentLesson.id, !isCurrentLessonComplete)
+    setNotice(isCurrentLessonComplete ? '已恢復為進行中。' : '已標記完成。')
   }
 
   const handleVideoEnded = () => {
-    playback.completeLesson(currentLesson.id)
+    playback.setLessonCompletion(currentLesson.id, true)
     if (nextLesson) {
       selectLesson(nextLesson.id)
       setNotice(`已完成 ${currentLesson.title}，已切換至下一單元：${nextLesson.title}。`)
       return
     }
-    setNotice('恭喜完成本課程最後一個單元。登入後可保存完整學習紀錄。')
+    setNotice('恭喜完成本課程最後一個單元。')
   }
 
   return (
     <div className="lesson-page">
       <a className="skip-link" href="#lesson-content">跳至主要內容</a>
-      <SiteHeader mode="player" />
+      <SiteHeader authUser={authUser} mode="player" onRegister={onRegister} onSignIn={onSignIn} onSignOut={onSignOut} />
       <main id="lesson-content" className="lesson-shell">
         <nav className="breadcrumbs" aria-label="麵包屑"><a href="#home">探索課程</a><span>/</span><a href="#home">{course.title}</a><span>/</span><span>{currentOutlineLesson?.chapterTitle}</span></nav>
         <div className="lesson-layout">
           <section className="lesson-main" aria-labelledby="lesson-title">
             <LessonVideoPlayer lesson={currentLesson} savedPositionSeconds={playback.lessonPositionSeconds[currentLesson.id] ?? 0} onEnded={handleVideoEnded} onPositionChange={(seconds) => playback.saveLessonPosition(currentLesson.id, seconds)} />
             <div className="lesson-content">
+              {playback.accessState === 'guest' && <section className="learning-sync-card"><div><strong>登入後儲存學習進度</strong><p>觀看位置與完成狀態會同步到你的帳戶。</p></div><Button variant="secondary" onClick={onRequestAuthentication}>登入並同步</Button></section>}
+              {playback.accessState === 'checking' && <p className="learning-sync-status" role="status">正在取得你的學習進度…</p>}
+              {playback.accessState === 'not-enrolled' && <section className="learning-sync-card"><div><strong>準備好開始這門課了嗎？</strong><p>加入課程後，觀看進度會同步到所有裝置。</p></div><Button disabled={playback.isEnrolling} onClick={() => void playback.enroll()}>{playback.isEnrolling ? '加入中…' : '加入課程並同步'}</Button></section>}
+              {playback.accessState === 'enrolled' && <p className="learning-sync-status learning-sync-status--ready" role="status">進度已同步至 {authUser?.displayName ?? '你的帳戶'}。</p>}
+              {(playback.syncError || playback.accessState === 'error') && <p className="learning-sync-error" role="alert">{playback.syncError || '目前無法取得你的學習進度。'}</p>}
               <div className="lesson-content__heading"><div><p>{currentOutlineLesson?.chapterTitle}　·　{formatDuration(currentLesson.durationSeconds)} · 影片課程</p><h1 id="lesson-title">{currentLesson.title}</h1></div><Button variant={isCurrentLessonComplete ? 'secondary' : 'primary'} onClick={handleComplete}>{isCurrentLessonComplete ? '已標記完成' : '標記為已完成'}</Button></div>
               {notice && <p className="lesson-notice" role="status">{notice}</p>}
               <p className="lesson-content__summary">{currentLesson.description}</p>

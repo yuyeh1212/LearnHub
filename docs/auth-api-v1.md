@@ -49,4 +49,4 @@ Authorization: Bearer <accessToken>
 2. 確認 migration 已在本機資料庫執行後，以 `./run-api.ps1` 啟動 API。
 3. API 預設使用 `http://127.0.0.1:3001`；前端開發站使用 `http://127.0.0.1:4173`。
 
-JWT 存取權杖只放在記憶體或安全的短期儲存策略中；不要將密碼、JWT 密鑰或資料庫連線字串放入前端的 `VITE_` 環境變數。
+JWT 存取權杖只放在記憶體或安全的短期儲存策略中；目前瀏覽器介面使用 `sessionStorage` 維持同一分頁工作階段，重新載入時會以 `GET /auth/me` 驗證權杖。不要將密碼、JWT 密鑰或資料庫連線字串放入前端的 `VITE_` 環境變數。

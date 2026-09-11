@@ -1,0 +1,17 @@
+.authentication-dialog { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: var(--space-4); background: rgb(8 23 47 / 0.56); }
+.authentication-dialog__panel { position: relative; width: min(100%, 29rem); padding: clamp(var(--space-6), 5vw, var(--space-10)); border: 1px solid rgb(255 255 255 / 0.5); border-radius: var(--radius-large); background: var(--color-surface); box-shadow: 0 24px 60px rgb(8 23 47 / 0.28); }
+.authentication-dialog__close { position: absolute; top: var(--space-4); right: var(--space-4); width: 2rem; height: 2rem; border: 0; border-radius: 50%; color: var(--color-text-secondary); background: var(--color-canvas); font-size: 1.35rem; line-height: 1; }
+.authentication-dialog__close:hover { color: var(--color-primary); background: var(--color-primary-soft); }
+.authentication-dialog__eyebrow { margin: 0 0 var(--space-3); color: var(--color-secondary); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; }
+.authentication-dialog h1 { max-width: 15ch; margin: 0; font-family: var(--font-display); font-size: clamp(1.65rem, 5vw, 2.15rem); letter-spacing: -0.045em; line-height: 1.2; }
+.authentication-dialog__summary { margin: var(--space-4) 0 var(--space-6); color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.7; }
+.authentication-dialog form { display: grid; gap: var(--space-4); }
+.authentication-dialog label { display: grid; gap: var(--space-2); color: var(--color-text-secondary); font-size: 0.82rem; font-weight: 800; }
+.authentication-dialog input { min-height: 44px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); padding: 0 var(--space-3); color: var(--color-text); background: var(--color-surface); font: inherit; font-weight: 500; }
+.authentication-dialog input:focus { border-color: var(--color-primary); outline: 3px solid rgb(29 78 216 / 0.15); }
+.authentication-dialog form .button { width: 100%; margin-top: var(--space-2); }
+.authentication-dialog__hint, .authentication-dialog__switch { margin: 0; color: var(--color-text-muted); font-size: 0.78rem; }
+.authentication-dialog__error { margin: 0; padding: var(--space-3); border-radius: var(--radius-control); color: #a61b32; background: #fff1f2; font-size: 0.82rem; line-height: 1.5; }
+.authentication-dialog__switch { margin-top: var(--space-6); text-align: center; }
+.authentication-dialog__switch button { border: 0; padding: 0; color: var(--color-primary); background: transparent; font: inherit; font-weight: 800; }
+@media (max-width: 420px) { .authentication-dialog__panel { padding: var(--space-6); } }

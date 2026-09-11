@@ -7,6 +7,8 @@ import { PostgresAuthRepository } from './auth/auth.repository.js'
 import { ProblemError, problemHandler, requestContext } from './http/problem.js'
 import { LearningRepository } from './learning/learning.repository.js'
 import { createLearningRouter } from './learning/learning.router.js'
+import { LearningProgressRepository } from './learning/learning-progress.repository.js'
+import { createLearningProgressRouter } from './learning/learning-progress.router.js'
 
 type AppDependencies = Pick<AppConfig, 'corsOrigin' | 'jwtSecret'> & {
   pool: Pool
@@ -33,6 +35,7 @@ export function createApp({ pool, corsOrigin, jwtSecret }: AppDependencies) {
     repository: new PostgresAuthRepository(pool),
     jwtSecret,
   }))
+  app.use('/api/v1', createLearningProgressRouter(new LearningProgressRepository(pool), jwtSecret))
 
   app.use((request, _response, next) => {
     next(new ProblemError({

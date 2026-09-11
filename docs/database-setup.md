@@ -1,6 +1,6 @@
 # 資料庫基礎
 
-LearnHub 使用 PostgreSQL。初始結構定義於 `db/migrations/0001_learning_core.sql`；目前它只是一份受版本控制的 schema，尚未由專案自動執行。
+LearnHub 使用 PostgreSQL。初始結構定義於 `db/migrations/0001_learning_core.sql`，目前學習狀態擴充定義於 `db/migrations/0002_course_learning_states.sql`；兩者都只受版本控制，尚未由專案自動執行。
 
 ## 本輪建立的資料模型
 
@@ -8,6 +8,7 @@ LearnHub 使用 PostgreSQL。初始結構定義於 `db/migrations/0001_learning_
 - `courses`、`chapters`、`lessons`、`lesson_resources`：課程內容與教材。
 - `enrollments`：使用者加入的課程，限制同一帳號只能加入一次。
 - `lesson_progress`：使用者每個單元的播放位置與完成時間，限制一個帳號在同一單元只有一筆進度。
+- `course_learning_states`：使用者每門課目前停留的單元，讓跨裝置開啟播放器時能回到上次的位置。
 
 課程整體完成率不寫入資料表，而是在讀取時由單元完成資料計算，避免兩份進度資料不同步。
 

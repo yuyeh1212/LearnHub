@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { AuthenticatedUser } from '../../contracts/auth'
 import { CourseCard } from '../../components/CourseCard'
 import { SiteHeader } from '../../components/SiteHeader'
 import { Button } from '../../components/ui/Button'
@@ -11,7 +12,14 @@ const paths = [
   { number: '03', title: 'UX 設計師', description: '用研究、流程與原型，讓設計真正改變產品體驗。', skills: ['UX Research', 'Figma', 'Design Systems'] },
 ]
 
-export function LandingPage() {
+interface LandingPageProps {
+  authUser: AuthenticatedUser | null
+  onRegister: () => void
+  onSignIn: () => void
+  onSignOut: () => void
+}
+
+export function LandingPage({ authUser, onRegister, onSignIn, onSignOut }: LandingPageProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const { courses, error, isLoading, retry } = useCourseCatalog(searchQuery)
   const firstCourse = courses[0]
@@ -28,7 +36,7 @@ export function LandingPage() {
     <div className="landing-page">
       <a className="skip-link" href="#main-content">跳至主要內容</a>
       <div className="landing-shell">
-        <SiteHeader searchQuery={searchQuery} searchResults={courses} onSearchQueryChange={setSearchQuery} onSearchSubmit={handleSearchSubmit} />
+        <SiteHeader authUser={authUser} searchQuery={searchQuery} searchResults={courses} onRegister={onRegister} onSearchQueryChange={setSearchQuery} onSearchSubmit={handleSearchSubmit} onSignIn={onSignIn} onSignOut={onSignOut} />
         <main id="main-content">
           <section className="hero" aria-labelledby="hero-title">
             <div className="hero__content">
