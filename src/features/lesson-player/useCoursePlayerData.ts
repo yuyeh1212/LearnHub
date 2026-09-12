@@ -18,6 +18,8 @@ export function useCoursePlayerData(courseId: string) {
   })
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null)
   const [retryKey, setRetryKey] = useState(0)
+  const [contentRefreshKey, setContentRefreshKey] = useState(0)
+  const [isRefreshingContent, setIsRefreshingContent] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -58,6 +60,7 @@ export function useCoursePlayerData(courseId: string) {
 
     const controller = new AbortController()
     setState((current) => ({ ...current, error: null, isLoading: current.currentLesson === null }))
+    setIsRefreshingContent(state.currentLesson !== null)
 
     void getLesson(selectedLessonId, controller.signal)
       .then((currentLesson) => setState((current) => ({ ...current, currentLesson, isLoading: false })))
@@ -75,12 +78,31 @@ export function useCoursePlayerData(courseId: string) {
               isLoading: false,
             })
       })
+      .finally(() => setIsRefreshingContent(false))
 
     return () => controller.abort()
-  }, [selectedLessonId])
+  }, [contentRefreshKey, selectedLessonId])
+
+  useEffect(() => {
+    if (!state.currentLesson) return
+    const expirations = [
+      state.currentLesson.videoAccessExpiresAt,
+      ...state.currentLesson.resources.map((resource) => resource.accessExpiresAt),
+    ].filter((value): value is string => Boolean(value)).map((value) => Date.parse(value)).filter(Number.isFinite)
+    if (!expirations.length) return
+
+    const refreshInMilliseconds = Math.max(0, Math.min(...expirations) - Date.now() - 60_000)
+    const timer = window.setTimeout(
+      () => setContentRefreshKey((current) => current + 1),
+      Math.min(refreshInMilliseconds, 2_147_483_647),
+    )
+    return () => window.clearTimeout(timer)
+  }, [state.currentLesson])
 
   return {
     ...state,
+    isRefreshingContent,
+    refreshContentAccess: () => setContentRefreshKey((current) => current + 1),
     retry: () => setRetryKey((current) => current + 1),
     selectLesson: setSelectedLessonId,
   }

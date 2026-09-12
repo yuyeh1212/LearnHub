@@ -10,6 +10,9 @@ coverage/
 !.env.example
 .vercel/
 
+# Private course media is provisioned per environment and never committed.
+/storage/private/
+
 # OS and editor files
 .DS_Store
 Thumbs.db

@@ -1,5 +1,6 @@
 import { Buffer } from 'node:buffer'
 import type { Pool } from 'pg'
+import type { ContentAccessProvider } from '../content/content-access.service.js'
 import type {
   CourseDetail,
   CourseListQuery,
@@ -35,10 +36,17 @@ type ChapterRow = {
 
 type LessonRow = LessonSummary & {
   description: string
+  videoAssetId: string | null
+  videoFileName: string | null
+  videoStorageKey: string | null
   videoUrl: string
 }
 
-type ResourceRow = LessonResource
+type ResourceRow = Omit<LessonResource, 'accessExpiresAt'> & {
+  contentAssetId: string | null
+  contentFileName: string | null
+  contentStorageKey: string | null
+}
 
 type CourseCursor = {
   createdAt: string
@@ -97,7 +105,10 @@ export function decodeCourseCursor(cursor: string): CourseCursor | null {
 }
 
 export class LearningRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(
+    private readonly pool: Pool,
+    private readonly contentAccessService: ContentAccessProvider,
+  ) {}
 
   async listCourses(query: CourseListQuery): Promise<CursorPage<CourseSummary>> {
     const cursor = query.cursor ? decodeCourseCursor(query.cursor) : null
@@ -216,10 +227,12 @@ export class LearningRepository {
     const lessonResult = await this.pool.query<LessonRow>(
       `SELECT lessons.id, lessons.chapter_id AS "chapterId", lessons.position, lessons.title,
         lessons.duration_seconds AS "durationSeconds", lessons.content_type AS "contentType",
-        lessons.description, lessons.video_url AS "videoUrl"
+        lessons.description, lessons.video_asset_id AS "videoAssetId", lessons.video_url AS "videoUrl",
+        video_asset.storage_key AS "videoStorageKey", video_asset.original_file_name AS "videoFileName"
        FROM lessons
        INNER JOIN chapters ON chapters.id = lessons.chapter_id
        INNER JOIN courses ON courses.id = chapters.course_id
+       LEFT JOIN content_assets AS video_asset ON video_asset.id = lessons.video_asset_id
        WHERE lessons.id = $1 AND courses.status = 'published'`,
       [lessonId],
     )
@@ -229,17 +242,53 @@ export class LearningRepository {
     }
 
     const resourcesResult = await this.pool.query<ResourceRow>(
-      `SELECT id, lesson_id AS "lessonId", position, title, kind,
-        download_url AS "downloadUrl", size_bytes AS "sizeBytes"
+      `SELECT lesson_resources.id, lesson_resources.lesson_id AS "lessonId",
+        lesson_resources.position, lesson_resources.title, lesson_resources.kind,
+        lesson_resources.content_asset_id AS "contentAssetId", lesson_resources.download_url AS "downloadUrl",
+        lesson_resources.size_bytes AS "sizeBytes", content_asset.storage_key AS "contentStorageKey",
+        content_asset.original_file_name AS "contentFileName"
        FROM lesson_resources
+       LEFT JOIN content_assets AS content_asset ON content_asset.id = lesson_resources.content_asset_id
        WHERE lesson_id = $1
        ORDER BY position ASC`,
       [lessonId],
     )
 
-    return { ...lesson, resources: resourcesResult.rows.map((resource) => ({
-      ...resource,
-      sizeBytes: Number(resource.sizeBytes),
-    })) }
+    const videoAccess = lesson.videoAssetId
+      ? await this.contentAccessService.createAccess({
+          assetId: lesson.videoAssetId,
+          disposition: 'inline',
+          originalFileName: lesson.videoFileName ?? undefined,
+          storageKey: lesson.videoStorageKey ?? undefined,
+        })
+      : null
+
+    return {
+      ...lesson,
+      videoUrl: videoAccess?.url ?? lesson.videoUrl,
+      videoAccessExpiresAt: videoAccess?.expiresAt ?? null,
+      resources: await Promise.all(resourcesResult.rows.map(async (resource) => {
+        const access = resource.contentAssetId
+          ? await this.contentAccessService.createAccess({
+              assetId: resource.contentAssetId,
+              disposition: 'attachment',
+              originalFileName: resource.contentFileName ?? undefined,
+              storageKey: resource.contentStorageKey ?? undefined,
+            })
+          : null
+        const {
+          contentAssetId: _contentAssetId,
+          contentFileName: _contentFileName,
+          contentStorageKey: _contentStorageKey,
+          ...publicResource
+        } = resource
+        return {
+          ...publicResource,
+          accessExpiresAt: access?.expiresAt ?? null,
+          downloadUrl: access?.url ?? resource.downloadUrl,
+          sizeBytes: Number(resource.sizeBytes),
+        }
+      })),
+    }
   }
 }

@@ -1,22 +1,29 @@
-# LearnHub Web
+# LearnHub
 
-LearnHub 的 React + Vite 前端雛型，包含 Landing 與 Lesson Player。
+LearnHub 是 React + Vite 前端與 Express + PostgreSQL API 組成的學習平台 MVP，包含課程目錄、帳密登入、選課、Lesson Player、跨裝置學習進度與短效私有內容交付。
 
 ## 啟動
 
-在本資料夾使用 PowerShell 執行：
+第一次使用時，依 [資料庫設定](docs/database-setup.md) 套用三個 migration、執行本機 seed，並準備私有展示內容：
 
 ```powershell
+.\scripts\prepare-local-content.ps1
+```
+
+分別啟動 API 與前端：
+
+```powershell
+.\run-api.ps1
 .\run-dev.ps1
 ```
 
-再開啟 `http://127.0.0.1:4173/`。首頁的「繼續學習」可進入 Lesson Player；播放器可手動標記完成並更新進度。
+再開啟 `http://127.0.0.1:4173/`。內容交付設定與安全邊界請見 [私有內容交付](docs/content-delivery.md)。
 
 ## 目前範圍
 
 - 使用 CSS tokens 固定色彩、字體、圓角、陰影與互動速度。
-- Landing 與 Lesson Player 為可操作的前端原型。
-- Landing 與 Lesson Player 目前仍使用前端範例資料；課程、登入與影片串流尚未串接。
-- PostgreSQL schema 已定義在 `db/migrations/0001_learning_core.sql`，但尚未對任何資料庫執行。
-- 學習資料與 API 契約請見 `docs/learning-api-v1.md`；資料庫設定說明請見 `docs/database-setup.md`。
-- 登入 API 已提供註冊、登入與目前使用者端點；規格與本機啟動方式請見 `docs/auth-api-v1.md`。
+- 首頁與 Lesson Player 直接讀取 API 課程資料。
+- 登入後可選課，並同步目前單元、觀看秒數與完成狀態。
+- 影片與教材以短效簽章 URL 交付，實際儲存位置不會進入前端 bundle 或 API DTO。
+- PostgreSQL migration 與本機 seed 目前仍需手動執行。
+- 私有內容支援本機檔案與 Supabase Storage；「我的學習」頁面與部署自動化仍待下一階段完成。

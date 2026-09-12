@@ -9,12 +9,40 @@ import { LearningRepository } from './learning/learning.repository.js'
 import { createLearningRouter } from './learning/learning.router.js'
 import { LearningProgressRepository } from './learning/learning-progress.repository.js'
 import { createLearningProgressRouter } from './learning/learning-progress.router.js'
+import { ContentAccessService } from './content/content-access.service.js'
+import { PostgresContentRepository } from './content/content.repository.js'
+import { LocalContentStorage } from './content/content-storage.js'
+import { createContentRouter } from './content/content.router.js'
+import { SupabaseContentAccessService } from './content/supabase-content-access.service.js'
 
-type AppDependencies = Pick<AppConfig, 'corsOrigin' | 'jwtSecret'> & {
+type AppDependencies = Pick<AppConfig,
+  | 'contentAccessTtlSeconds'
+  | 'contentSigningSecret'
+  | 'contentStorageRoot'
+  | 'contentStorageDriver'
+  | 'corsOrigin'
+  | 'jwtSecret'
+  | 'publicApiBaseUrl'
+  | 'supabaseSecretKey'
+  | 'supabaseStorageBucket'
+  | 'supabaseUrl'
+> & {
   pool: Pool
 }
 
-export function createApp({ pool, corsOrigin, jwtSecret }: AppDependencies) {
+export function createApp({
+  pool,
+  corsOrigin,
+  jwtSecret,
+  publicApiBaseUrl,
+  contentStorageRoot,
+  contentSigningSecret,
+  contentAccessTtlSeconds,
+  contentStorageDriver,
+  supabaseUrl,
+  supabaseSecretKey,
+  supabaseStorageBucket,
+}: AppDependencies) {
   const app = express()
 
   app.disable('x-powered-by')
@@ -26,10 +54,30 @@ export function createApp({ pool, corsOrigin, jwtSecret }: AppDependencies) {
     response.status(200).json({ status: 'ok' })
   })
 
-  const learningRepository = new LearningRepository(pool)
+  const contentAccessService = new ContentAccessService({
+    publicApiBaseUrl,
+    signingSecret: contentSigningSecret,
+    ttlSeconds: contentAccessTtlSeconds,
+  })
+  const contentAccessProvider = contentStorageDriver === 'supabase'
+    ? new SupabaseContentAccessService({
+        bucket: supabaseStorageBucket,
+        secretKey: supabaseSecretKey ?? '',
+        supabaseUrl: supabaseUrl ?? '',
+        ttlSeconds: contentAccessTtlSeconds,
+      })
+    : contentAccessService
+  const learningRepository = new LearningRepository(pool, contentAccessProvider)
   const { coursesRouter, lessonsRouter } = createLearningRouter(learningRepository)
   app.use('/api/v1/courses', coursesRouter)
   app.use('/api/v1/lessons', lessonsRouter)
+  if (contentStorageDriver === 'local') {
+    app.use('/api/v1/content-assets', createContentRouter({
+      accessService: contentAccessService,
+      repository: new PostgresContentRepository(pool),
+      storage: new LocalContentStorage(contentStorageRoot),
+    }))
+  }
 
   app.use('/api/v1/auth', createAuthRouter({
     repository: new PostgresAuthRepository(pool),

@@ -9,10 +9,14 @@
     "api:check": "tsc --project tsconfig.server.json",
     "api:dev": "tsx watch server/main.ts",
     "api:start": "tsx server/main.ts",
-    "test:api": "tsx --test server/auth/auth.service.test.ts server/learning/learning-progress.repository.test.ts",
+    "test:api": "tsx --test server/auth/auth.service.test.ts server/content/content-access.service.test.ts server/content/content.router.test.ts server/content/supabase-content-access.service.test.ts server/learning/learning-progress.repository.test.ts",
+    "content:prepare": "powershell -ExecutionPolicy Bypass -File scripts/prepare-local-content.ps1",
+    "content:upload": "node scripts/upload-content-to-supabase.mjs",
+    "content:verify": "node scripts/verify-content-delivery.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.116.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",

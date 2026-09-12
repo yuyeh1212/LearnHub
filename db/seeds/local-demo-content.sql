@@ -3,6 +3,16 @@
 
 BEGIN;
 
+INSERT INTO content_assets (id, storage_key, media_type, original_file_name, byte_size)
+VALUES
+  ('f2531bf3-d447-40cb-a907-4bd66c111001', 'demo/videos/flower.mp4', 'video/mp4', 'react-hooks-demo.mp4', NULL),
+  ('f2531bf3-d447-40cb-a907-4bd66c111002', 'demo/resources/useFetch.ts', 'text/plain; charset=utf-8', 'useFetch.ts', NULL)
+ON CONFLICT (id) DO UPDATE SET
+  storage_key = EXCLUDED.storage_key,
+  media_type = EXCLUDED.media_type,
+  original_file_name = EXCLUDED.original_file_name,
+  byte_size = COALESCE(EXCLUDED.byte_size, content_assets.byte_size);
+
 INSERT INTO courses (id, slug, title, summary, category, instructor_name, cover_image_url, status)
 VALUES
   ('b2531bf3-d447-40cb-a907-4bd66c111001', 'react-architecture', 'React 全端工程師培養課程', '從 React 核心心智模型到非同步狀態管理，建立可維護的前端架構能力。', '軟體工程', '林育賢', 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=1200&q=80', 'published'),
@@ -27,9 +37,24 @@ VALUES
   ('d2531bf3-d447-40cb-a907-4bd66c111006', 'c2531bf3-d447-40cb-a907-4bd66c111003', 1, '從使用者洞察到設計策略', '將研究觀察整理成可推進產品設計的清晰假設與策略。', 780, 'video', 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4')
 ON CONFLICT (id) DO NOTHING;
 
+UPDATE lessons
+SET video_asset_id = 'f2531bf3-d447-40cb-a907-4bd66c111001'
+WHERE id IN (
+  'd2531bf3-d447-40cb-a907-4bd66c111001',
+  'd2531bf3-d447-40cb-a907-4bd66c111002',
+  'd2531bf3-d447-40cb-a907-4bd66c111003',
+  'd2531bf3-d447-40cb-a907-4bd66c111004',
+  'd2531bf3-d447-40cb-a907-4bd66c111005',
+  'd2531bf3-d447-40cb-a907-4bd66c111006'
+);
+
 INSERT INTO lesson_resources (id, lesson_id, position, title, kind, download_url, size_bytes)
 VALUES
   ('e2531bf3-d447-40cb-a907-4bd66c111001', 'd2531bf3-d447-40cb-a907-4bd66c111002', 1, 'useFetch.ts 範例檔', 'code', 'https://raw.githubusercontent.com/microsoft/TypeScript/main/README.md', 1024)
 ON CONFLICT (id) DO NOTHING;
+
+UPDATE lesson_resources
+SET content_asset_id = 'f2531bf3-d447-40cb-a907-4bd66c111002'
+WHERE id = 'e2531bf3-d447-40cb-a907-4bd66c111001';
 
 COMMIT;

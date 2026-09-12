@@ -44,7 +44,8 @@ users ──< enrollments >── courses ──< chapters ──< lessons ─�
 | `GET /courses?query=&category=&cursor=&limit=` | 課程目錄與搜尋 | `200 CursorPage<CourseSummary>` |
 | `GET /courses/{courseId}` | 課程基本資訊 | `200 CourseDetail` |
 | `GET /courses/{courseId}/outline` | 課程、章節與單元大綱 | `200 CourseOutline` |
-| `GET /lessons/{lessonId}` | 播放頁所需的單元與附件 | `200 LessonDetail` |
+| `GET /lessons/{lessonId}` | 播放頁所需的單元與短效內容網址 | `200 LessonDetail` |
+| `GET /content-assets/{assetId}?expires=&disposition=&signature=` | 驗證短效簽章後串流影片或下載教材 | `200` 或 `206` 內容串流 |
 | `POST /enrollments` | 選修課程；body 為 `{ "courseId": "..." }` | `201 Enrollment` |
 | `GET /me/enrollments` | 目前使用者已選修的課程 | `200 CursorPage<Enrollment>` |
 | `GET /me/course-progress/{courseId}` | 課程完成度與每個單元進度 | `200 CourseProgress` |
@@ -84,4 +85,4 @@ users ──< enrollments >── courses ──< chapters ──< lessons ─�
 
 1. 已以 `src/contracts/learning.ts` 的型別建立 API client，首頁與播放器已串接課程目錄、課程大綱與單元內容。
 2. 登入後，播放器會先要求選修，再以 `GET`／`PATCH`／`PUT` 進度 API 同步觀看位置、完成狀態與目前單元。
-3. 最後接影音與資源儲存服務的授權 URL。
+3. 已加入供應商中立的私有內容資料與短效授權 URL；本機由檔案儲存 adapter 提供內容，正式環境可切換為 Supabase Storage adapter。

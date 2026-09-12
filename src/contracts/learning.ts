@@ -44,12 +44,14 @@ export interface LessonResource {
   title: string
   kind: LessonResourceKind
   downloadUrl: string
+  accessExpiresAt: ISODateTime | null
   sizeBytes: number | null
 }
 
 export interface LessonDetail extends LessonSummary {
   description: string
   videoUrl: string
+  videoAccessExpiresAt: ISODateTime | null
   resources: LessonResource[]
 }
 

@@ -5,12 +5,14 @@ import './lessonVideoPlayer.css'
 
 interface LessonVideoPlayerProps {
   lesson: Pick<LessonDetail, 'id' | 'title' | 'videoUrl'>
+  isRefreshingSource: boolean
   savedPositionSeconds: number
   onEnded: () => void
   onPositionChange: (seconds: number) => void
+  onRefreshSource: () => void
 }
 
-export function LessonVideoPlayer({ lesson, savedPositionSeconds, onEnded, onPositionChange }: LessonVideoPlayerProps) {
+export function LessonVideoPlayer({ lesson, isRefreshingSource, savedPositionSeconds, onEnded, onPositionChange, onRefreshSource }: LessonVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const lastSavedPosition = useRef(Math.floor(savedPositionSeconds))
   const [isPlaying, setIsPlaying] = useState(false)
@@ -20,7 +22,7 @@ export function LessonVideoPlayer({ lesson, savedPositionSeconds, onEnded, onPos
     lastSavedPosition.current = Math.floor(savedPositionSeconds)
     setIsPlaying(false)
     setHasMediaError(false)
-  }, [lesson.id])
+  }, [lesson.id, lesson.videoUrl])
 
   const handleLoadedMetadata = () => {
     const video = videoRef.current
@@ -62,7 +64,7 @@ export function LessonVideoPlayer({ lesson, savedPositionSeconds, onEnded, onPos
 
   const handleRetry = () => {
     setHasMediaError(false)
-    videoRef.current?.load()
+    onRefreshSource()
   }
 
   const handleEnded = () => {
@@ -73,7 +75,7 @@ export function LessonVideoPlayer({ lesson, savedPositionSeconds, onEnded, onPos
   return (
     <div className={`player lesson-video-player ${isPlaying ? 'player--playing' : ''}`}>
       <video
-        key={lesson.id}
+        key={`${lesson.id}:${lesson.videoUrl}`}
         ref={videoRef}
         className="lesson-video-player__media"
         controls
@@ -91,7 +93,7 @@ export function LessonVideoPlayer({ lesson, savedPositionSeconds, onEnded, onPos
       </video>
       <div className="player__top"><span>LESSON {lesson.id}</span><span>{formatPlaybackTime(savedPositionSeconds)} 已觀看</span></div>
       {!hasMediaError && <button className="play-button" type="button" aria-label={isPlaying ? '暫停影片' : '播放影片'} onClick={handleTogglePlayback}><i /></button>}
-      {hasMediaError && <div className="lesson-video-player__error" role="alert"><p>影片暫時無法載入。</p><button type="button" onClick={handleRetry}>重新載入</button></div>}
+      {hasMediaError && <div className="lesson-video-player__error" role="alert"><p>影片授權可能已過期，請重新取得播放連結。</p><button type="button" disabled={isRefreshingSource} onClick={handleRetry}>{isRefreshingSource ? '重新取得中…' : '重新取得播放連結'}</button></div>}
     </div>
   )
 }

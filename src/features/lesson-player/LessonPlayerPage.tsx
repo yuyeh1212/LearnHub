@@ -17,6 +17,8 @@ interface LessonPlayerPageProps {
   course: CourseDetail
   chapters: CourseOutlineChapter[]
   currentLesson: LessonDetail
+  isRefreshingContent: boolean
+  onRefreshContentAccess: () => void
   onRegister: () => void
   onRequestAuthentication: () => void
   onSelectLesson: (lessonId: string) => void
@@ -32,7 +34,7 @@ function getResourceKindLabel(kind: LessonDetail['resources'][number]['kind']) {
   return kind === 'code' ? '程式碼' : kind === 'document' ? '講義' : '練習題'
 }
 
-export function LessonPlayerPage({ accessToken, authUser, course, chapters, currentLesson, onRegister, onRequestAuthentication, onSelectLesson, onSignIn, onSignOut }: LessonPlayerPageProps) {
+export function LessonPlayerPage({ accessToken, authUser, course, chapters, currentLesson, isRefreshingContent, onRefreshContentAccess, onRegister, onRequestAuthentication, onSelectLesson, onSignIn, onSignOut }: LessonPlayerPageProps) {
   const [notice, setNotice] = useState('')
   const outlineLessons = useMemo<OutlineLesson[]>(() => chapters.flatMap((chapter) => chapter.lessons.map((lesson) => ({ ...lesson, chapterTitle: chapter.title }))), [chapters])
   const playback = useCourseLearningProgress(course.id, outlineLessons.map((lesson) => lesson.id), accessToken)
@@ -77,7 +79,7 @@ export function LessonPlayerPage({ accessToken, authUser, course, chapters, curr
         <nav className="breadcrumbs" aria-label="麵包屑"><a href="#home">探索課程</a><span>/</span><a href="#home">{course.title}</a><span>/</span><span>{currentOutlineLesson?.chapterTitle}</span></nav>
         <div className="lesson-layout">
           <section className="lesson-main" aria-labelledby="lesson-title">
-            <LessonVideoPlayer lesson={currentLesson} savedPositionSeconds={playback.lessonPositionSeconds[currentLesson.id] ?? 0} onEnded={handleVideoEnded} onPositionChange={(seconds) => playback.saveLessonPosition(currentLesson.id, seconds)} />
+            <LessonVideoPlayer lesson={currentLesson} isRefreshingSource={isRefreshingContent} savedPositionSeconds={playback.lessonPositionSeconds[currentLesson.id] ?? 0} onEnded={handleVideoEnded} onPositionChange={(seconds) => playback.saveLessonPosition(currentLesson.id, seconds)} onRefreshSource={onRefreshContentAccess} />
             <div className="lesson-content">
               {playback.accessState === 'guest' && <section className="learning-sync-card"><div><strong>登入後儲存學習進度</strong><p>觀看位置與完成狀態會同步到你的帳戶。</p></div><Button variant="secondary" onClick={onRequestAuthentication}>登入並同步</Button></section>}
               {playback.accessState === 'checking' && <p className="learning-sync-status" role="status">正在取得你的學習進度…</p>}
