@@ -1,6 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import type { Pool } from 'pg'
-import type { CourseProgress, CursorPage, Enrollment, LessonProgress } from '../../src/contracts/learning.js'
+import type {
+  CourseProgress,
+  CursorPage,
+  Enrollment,
+  LearningCourseSummary,
+  LessonProgress,
+} from '../../src/contracts/learning.js'
 
 type EnrollmentRow = {
   id: string
@@ -25,6 +31,28 @@ type CourseLearningStateRow = {
   updatedAt: Date
 }
 
+type LearningCourseRow = {
+  category: string
+  completedLessonCount: number
+  courseId: string
+  courseSlug: string
+  courseSummary: string
+  courseTitle: string
+  coverImageUrl: string | null
+  currentLessonChapterId: string | null
+  currentLessonContentType: 'video' | null
+  currentLessonDurationSeconds: number | null
+  currentLessonId: string | null
+  currentLessonPosition: number | null
+  currentLessonTitle: string | null
+  enrolledAt: Date
+  enrollmentId: string
+  instructorName: string
+  learnerCount: number
+  lessonCount: number
+  updatedAt: Date
+}
+
 function toIsoDate(value: Date) {
   return value.toISOString()
 }
@@ -42,6 +70,41 @@ function toLessonProgress(row: LessonProgressRow): LessonProgress {
     lessonId: row.lessonId,
     positionSeconds: row.positionSeconds,
     completedAt: row.completedAt ? toIsoDate(row.completedAt) : null,
+    updatedAt: toIsoDate(row.updatedAt),
+  }
+}
+
+function toLearningCourseSummary(row: LearningCourseRow): LearningCourseSummary {
+  const lessonCount = Number(row.lessonCount)
+  const completedLessonCount = Number(row.completedLessonCount)
+
+  return {
+    course: {
+      id: row.courseId,
+      slug: row.courseSlug,
+      title: row.courseTitle,
+      summary: row.courseSummary,
+      category: row.category,
+      instructorName: row.instructorName,
+      learnerCount: Number(row.learnerCount),
+      coverImageUrl: row.coverImageUrl,
+    },
+    enrollment: {
+      id: row.enrollmentId,
+      courseId: row.courseId,
+      enrolledAt: toIsoDate(row.enrolledAt),
+    },
+    currentLesson: row.currentLessonId ? {
+      id: row.currentLessonId,
+      chapterId: row.currentLessonChapterId ?? '',
+      position: Number(row.currentLessonPosition),
+      title: row.currentLessonTitle ?? '',
+      durationSeconds: Number(row.currentLessonDurationSeconds),
+      contentType: row.currentLessonContentType ?? 'video',
+    } : null,
+    completedLessonCount,
+    lessonCount,
+    completionPercent: lessonCount ? Math.round((completedLessonCount / lessonCount) * 100) : 0,
     updatedAt: toIsoDate(row.updatedAt),
   }
 }
@@ -82,6 +145,72 @@ export class LearningProgressRepository {
     )
 
     return { data: result.rows.map(toEnrollment), nextCursor: null }
+  }
+
+  async listLearningCourses(userId: string): Promise<CursorPage<LearningCourseSummary>> {
+    const result = await this.pool.query<LearningCourseRow>(
+      `SELECT
+        enrollments.id AS "enrollmentId",
+        enrollments.course_id AS "courseId",
+        enrollments.enrolled_at AS "enrolledAt",
+        courses.slug AS "courseSlug",
+        courses.title AS "courseTitle",
+        courses.summary AS "courseSummary",
+        courses.category,
+        courses.instructor_name AS "instructorName",
+        courses.cover_image_url AS "coverImageUrl",
+        (SELECT COUNT(*)::integer FROM enrollments AS course_enrollments
+          WHERE course_enrollments.course_id = courses.id) AS "learnerCount",
+        COALESCE(progress.lesson_count, 0)::integer AS "lessonCount",
+        COALESCE(progress.completed_lesson_count, 0)::integer AS "completedLessonCount",
+        current_lesson.id AS "currentLessonId",
+        current_lesson.chapter_id AS "currentLessonChapterId",
+        current_lesson.position AS "currentLessonPosition",
+        current_lesson.title AS "currentLessonTitle",
+        current_lesson.duration_seconds AS "currentLessonDurationSeconds",
+        current_lesson.content_type AS "currentLessonContentType",
+        GREATEST(
+          enrollments.enrolled_at,
+          COALESCE(learning_state.updated_at, '-infinity'::timestamptz),
+          COALESCE(progress.progress_updated_at, '-infinity'::timestamptz)
+        ) AS "updatedAt"
+       FROM enrollments
+       INNER JOIN courses ON courses.id = enrollments.course_id
+       LEFT JOIN course_learning_states AS learning_state
+         ON learning_state.user_id = enrollments.user_id
+         AND learning_state.course_id = enrollments.course_id
+       LEFT JOIN LATERAL (
+         SELECT
+           COUNT(lessons.id)::integer AS lesson_count,
+           (COUNT(lesson_progress.lesson_id)
+             FILTER (WHERE lesson_progress.completed_at IS NOT NULL))::integer AS completed_lesson_count,
+           MAX(lesson_progress.updated_at) AS progress_updated_at
+         FROM chapters
+         INNER JOIN lessons ON lessons.chapter_id = chapters.id
+         LEFT JOIN lesson_progress
+           ON lesson_progress.lesson_id = lessons.id
+           AND lesson_progress.user_id = enrollments.user_id
+         WHERE chapters.course_id = courses.id
+       ) AS progress ON true
+       LEFT JOIN LATERAL (
+         SELECT lessons.id, lessons.chapter_id, lessons.position, lessons.title,
+           lessons.duration_seconds, lessons.content_type
+         FROM chapters
+         INNER JOIN lessons ON lessons.chapter_id = chapters.id
+         WHERE chapters.course_id = courses.id
+         ORDER BY
+           CASE WHEN lessons.id = learning_state.current_lesson_id THEN 0 ELSE 1 END,
+           chapters.position ASC,
+           lessons.position ASC
+         LIMIT 1
+       ) AS current_lesson ON true
+       WHERE enrollments.user_id = $1 AND courses.status = 'published'
+       ORDER BY "updatedAt" DESC, enrollments.id DESC
+       LIMIT 48`,
+      [userId],
+    )
+
+    return { data: result.rows.map(toLearningCourseSummary), nextCursor: null }
   }
 
   async isEnrolled(userId: string, courseId: string): Promise<boolean> {

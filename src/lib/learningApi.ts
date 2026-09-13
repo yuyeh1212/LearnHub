@@ -7,6 +7,7 @@ import type {
   Enrollment,
   LessonDetail,
   LessonProgress,
+  LearningCourseSummary,
   UpdateCourseProgressInput,
   UpsertLessonProgressInput,
 } from '../contracts/learning'
@@ -88,6 +89,10 @@ export function enrollInCourse(courseId: string, accessToken: string) {
 
 export function getCourseProgress(courseId: string, accessToken: string, signal?: AbortSignal) {
   return request<CourseProgress>(`/me/course-progress/${encodeURIComponent(courseId)}`, { accessToken, signal })
+}
+
+export function listMyLearningCourses(accessToken: string, signal?: AbortSignal) {
+  return request<CursorPage<LearningCourseSummary>>('/me/learning-courses', { accessToken, signal })
 }
 
 export function updateCurrentLesson(courseId: string, input: UpdateCourseProgressInput, accessToken: string) {

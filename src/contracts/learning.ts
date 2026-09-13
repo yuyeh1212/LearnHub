@@ -87,6 +87,16 @@ export interface CourseProgress {
   updatedAt: ISODateTime
 }
 
+export interface LearningCourseSummary {
+  course: CourseSummary
+  enrollment: Enrollment
+  currentLesson: LessonSummary | null
+  completedLessonCount: number
+  lessonCount: number
+  completionPercent: number
+  updatedAt: ISODateTime
+}
+
 export interface CourseListQuery {
   cursor?: string
   limit?: number

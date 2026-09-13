@@ -68,7 +68,7 @@ export function LandingPage({ authUser, onRegister, onSignIn, onSignOut }: Landi
           <section className="paths-section" id="paths" aria-labelledby="paths-title"><div className="section-heading"><p className="eyebrow">職涯路徑</p><h2 id="paths-title">不是課程清單，而是能走下去的方向</h2><p>依你想抵達的位置，找到下一個最值得投入的技能組合。</p></div><div className="path-grid">{paths.map((path) => <article key={path.number} className="path-card"><span>{path.number}</span><h3>{path.title}</h3><p>{path.description}</p><ul>{path.skills.map((skill) => <li key={skill}>{skill}</li>)}</ul><a href="#explore">查看路徑 →</a></article>)}</div></section>
         </main>
       </div>
-      <footer className="site-footer"><div><strong>LearnHub</strong><p>讓每一次學習，成為你職涯向前的證據。</p></div><div><a href="#explore">探索課程</a><a href="#paths">職涯路徑</a><a href="#home">我的學習</a></div><p>© 2026 LearnHub</p></footer>
+      <footer className="site-footer"><div><strong>LearnHub</strong><p>讓每一次學習，成為你職涯向前的證據。</p></div><div><a href="#explore">探索課程</a><a href="#paths">職涯路徑</a><a href="#learning">我的學習</a></div><p>© 2026 LearnHub</p></footer>
     </div>
   )
 }

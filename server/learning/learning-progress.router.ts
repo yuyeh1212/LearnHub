@@ -95,6 +95,10 @@ export function createLearningProgressRouter(repository: LearningProgressReposit
     response.status(200).json(await repository.listEnrollments(response.locals.auth.userId))
   }))
 
+  router.get('/me/learning-courses', asyncHandler(async (_request, response) => {
+    response.status(200).json(await repository.listLearningCourses(response.locals.auth.userId))
+  }))
+
   router.get('/me/course-progress/:courseId', asyncHandler(async (request, response) => {
     const courseId = parseId(request.params.courseId, 'courseId')
     const userId = response.locals.auth.userId

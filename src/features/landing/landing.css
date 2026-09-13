@@ -54,7 +54,7 @@
 .lesson-signal i { flex: 1; background: var(--color-tertiary); }
 .lesson-signal i:nth-child(1) { height: 30%; }.lesson-signal i:nth-child(2) { height: 62%; }.lesson-signal i:nth-child(3) { height: 45%; }.lesson-signal i:nth-child(4) { height: 76%; }
 .hero-map__lesson div { min-width: 0; flex: 1; }.hero-map__lesson small { display: block; color: var(--color-text-muted); font-size: 0.7rem; }.hero-map__lesson strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.83rem; }.hero-map__lesson a { color: var(--color-primary); font-size: 0.8rem; font-weight: 800; }
-.progress { width: 100%; height: 8px; overflow: hidden; border-radius: 99px; background: #eaf0f8; }.progress--small { height: 5px; }.progress__value { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--color-primary), var(--color-secondary)); transition: width var(--duration-standard) var(--ease-standard); }.hero-map > .progress { margin-top: var(--space-4); }
+.hero-map > .progress { margin-top: var(--space-4); }
 .continue-section, .courses-section, .paths-section { padding: var(--space-16) 0; }
 .section-heading { max-width: 44rem; }.section-heading h2, .cohort-section h2 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.6rem); }.section-heading > p:last-child, .cohort-section__intro > p:last-child { max-width: 38rem; color: var(--color-text-secondary); }
 .section-heading--inline { max-width: none; display: flex; align-items: end; justify-content: space-between; gap: var(--space-6); margin-bottom: var(--space-8); }.section-heading--inline > a { margin-bottom: 0.35rem; white-space: nowrap; }

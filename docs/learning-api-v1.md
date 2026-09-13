@@ -48,6 +48,7 @@ users ──< enrollments >── courses ──< chapters ──< lessons ─�
 | `GET /content-assets/{assetId}?expires=&disposition=&signature=` | 驗證短效簽章後串流影片或下載教材 | `200` 或 `206` 內容串流 |
 | `POST /enrollments` | 選修課程；body 為 `{ "courseId": "..." }` | `201 Enrollment` |
 | `GET /me/enrollments` | 目前使用者已選修的課程 | `200 CursorPage<Enrollment>` |
+| `GET /me/learning-courses` | 我的學習清單、目前單元與彙整進度 | `200 CursorPage<LearningCourseSummary>` |
 | `GET /me/course-progress/{courseId}` | 課程完成度與每個單元進度 | `200 CourseProgress` |
 | `PATCH /me/course-progress/{courseId}` | 更新目前學習單元 | `200 CourseProgress` |
 | `PUT /me/lesson-progress/{lessonId}` | 冪等更新觀看秒數與完成狀態 | `200 LessonProgress` |
@@ -86,3 +87,4 @@ users ──< enrollments >── courses ──< chapters ──< lessons ─�
 1. 已以 `src/contracts/learning.ts` 的型別建立 API client，首頁與播放器已串接課程目錄、課程大綱與單元內容。
 2. 登入後，播放器會先要求選修，再以 `GET`／`PATCH`／`PUT` 進度 API 同步觀看位置、完成狀態與目前單元。
 3. 已加入供應商中立的私有內容資料與短效授權 URL；本機由檔案儲存 adapter 提供內容，正式環境可切換為 Supabase Storage adapter。
+4. 「我的學習」使用單一聚合端點取得已加入課程、最近單元與完成比例，避免前端針對每門課發出多組請求。

@@ -4,12 +4,14 @@ import { useAuthSession } from './features/auth/useAuthSession'
 import { LandingPage } from './features/landing/LandingPage'
 import { LessonPlayerPage } from './features/lesson-player/LessonPlayerPage'
 import { useCoursePlayerData } from './features/lesson-player/useCoursePlayerData'
+import { MyLearningPage } from './features/my-learning/MyLearningPage'
 
-type View = { name: 'home' } | { courseId: string; name: 'lesson' }
+type View = { name: 'home' } | { name: 'learning' } | { courseId: string; name: 'lesson' }
 
 function getViewFromHash(): View {
   const match = window.location.hash.match(/^#lesson\/([^/]+)$/)
-  return match ? { name: 'lesson', courseId: decodeURIComponent(match[1]) } : { name: 'home' }
+  if (match) return { name: 'lesson', courseId: decodeURIComponent(match[1]) }
+  return window.location.hash === '#learning' ? { name: 'learning' } : { name: 'home' }
 }
 
 interface LessonRouteProps {
@@ -49,7 +51,9 @@ export function App() {
   const openRegister = () => setDialogMode('register')
   const content = view.name === 'lesson'
     ? <LessonRoute accessToken={auth.accessToken} courseId={view.courseId} onRegister={openRegister} onRequestAuthentication={openSignIn} onSignIn={openSignIn} onSignOut={auth.signOut} user={auth.user} />
-    : <LandingPage authUser={auth.user} onRegister={openRegister} onSignIn={openSignIn} onSignOut={auth.signOut} />
+    : view.name === 'learning'
+      ? <MyLearningPage accessToken={auth.accessToken} authUser={auth.user} isRestoringSession={auth.isRestoring} onRegister={openRegister} onSignIn={openSignIn} onSignOut={auth.signOut} />
+      : <LandingPage authUser={auth.user} onRegister={openRegister} onSignIn={openSignIn} onSignOut={auth.signOut} />
 
   return <>{content}<AuthenticationDialog isOpen={dialogMode !== null} mode={dialogMode ?? 'login'} onClose={() => setDialogMode(null)} onSubmit={async (mode, input) => { await auth.authenticate(mode, input) }} /></>
 }
