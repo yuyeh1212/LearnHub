@@ -41,7 +41,6 @@ export function SiteHeader({ authUser = null, mode = 'landing', onRegister, onSe
       <a href="#home" className="site-header__brand"><BrandMark /></a>
       <nav className="site-header__nav" aria-label="主要導覽">
         <a href={mode === 'learning' ? '#home' : '#explore'}>探索課程</a>
-        <a href="#paths">職涯路徑</a>
         <a aria-current={mode === 'learning' ? 'page' : undefined} href="#learning">我的學習</a>
       </nav>
       {mode === 'landing' && <form className="site-search" onSubmit={(event) => { event.preventDefault(); onSearchSubmit?.() }} role="search">
