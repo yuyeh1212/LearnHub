@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '../http/async-handler.js'
 import { ProblemError } from '../http/problem.js'
+import { createFixedWindowRateLimiter } from '../http/rate-limit.js'
 import { validateBody } from '../http/validate.js'
 import type { AuthRepository } from './auth.repository.js'
 import { requireAuthentication } from './auth.middleware.js'
@@ -34,13 +35,25 @@ type AuthRouterDependencies = {
 export function createAuthRouter({ repository, jwtSecret }: AuthRouterDependencies) {
   const router = Router()
   const service = new AuthService(repository, jwtSecret)
+  const registerRateLimit = createFixedWindowRateLimiter({
+    keyPrefix: 'auth:register',
+    maxRequests: 5,
+    windowMs: 10 * 60 * 1_000,
+    detail: 'Too many registration attempts. Please wait before trying again.',
+  })
+  const loginRateLimit = createFixedWindowRateLimiter({
+    keyPrefix: 'auth:login',
+    maxRequests: 10,
+    windowMs: 60 * 1_000,
+    detail: 'Too many login attempts. Please wait before trying again.',
+  })
 
-  router.post('/register', validateBody(registerSchema), asyncHandler(async (request, response) => {
+  router.post('/register', registerRateLimit, validateBody(registerSchema), asyncHandler(async (request, response) => {
     const result = await service.register(request.body)
     response.status(201).location(`/api/v1/users/${result.user.id}`).json(result)
   }))
 
-  router.post('/login', validateBody(loginSchema), asyncHandler(async (request, response) => {
+  router.post('/login', loginRateLimit, validateBody(loginSchema), asyncHandler(async (request, response) => {
     const result = await service.login(request.body)
     response.status(200).json(result)
   }))

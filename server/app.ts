@@ -6,6 +6,7 @@ import { createAuthRouter } from './auth/auth.router.js'
 import { PostgresAuthRepository } from './auth/auth.repository.js'
 import { asyncHandler } from './http/async-handler.js'
 import { ProblemError, problemHandler, requestContext } from './http/problem.js'
+import { securityHeaders } from './http/security-headers.js'
 import { LearningRepository } from './learning/learning.repository.js'
 import { createLearningRouter } from './learning/learning.router.js'
 import { LearningProgressRepository } from './learning/learning-progress.repository.js'
@@ -48,6 +49,7 @@ export function createApp({
 
   app.disable('x-powered-by')
   app.use(requestContext)
+  app.use(securityHeaders)
   if (corsOrigin) {
     app.use(cors({ origin: corsOrigin, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }))
   }
