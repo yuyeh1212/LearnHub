@@ -33,7 +33,7 @@ function LessonRoute({ accessToken, courseId, onRegister, onRequestAuthenticatio
   )
   const { courseOutline, currentLesson, error, isLoading, isRefreshingContent, refreshContentAccess, retry, selectLesson } = useCoursePlayerData(courseId, preferredLessonId)
 
-  if (isLoading) return <main className="app-data-state" role="status"><h1>正在載入課程</h1><p>請稍候，正在取得課程大綱與單元內容。</p></main>
+  if (isLoading) return <main className="app-data-state" role="status"><h1>正在載入課程</h1><p>正在取得課程大綱和單元內容，等一下就好。</p></main>
 
   if (error || !courseOutline || !currentLesson) {
     return <main className="app-data-state" role="alert"><h1>暫時無法開啟播放器</h1><p>{error ?? '這門課目前沒有可播放的單元。'}</p><button type="button" onClick={retry}>重新載入課程</button><a href="#home">回到課程目錄</a></main>
@@ -55,7 +55,7 @@ export function App() {
   }, [])
 
   useEffect(() => subscribeAuthSessionExpired(() => {
-    setDialogMessage('登入狀態已過期，請重新登入後繼續。你目前所在的頁面會保留。')
+    setDialogMessage('登入已過期，請重新登入。你現在看的頁面會保留。')
     setDialogMode('login')
   }), [])
 

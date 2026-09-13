@@ -16,7 +16,7 @@ type CatalogState = {
 }
 
 function getCourseCatalogError(error: unknown) {
-  return error instanceof LearningApiError ? error.message : '目前無法取得課程，請稍後再試。'
+  return error instanceof LearningApiError ? error.message : '課程暫時載不進來，請稍後再試。'
 }
 
 function useDebouncedValue(value: string, delayMs: number) {

@@ -46,7 +46,7 @@ export function useCoursePlayerData(courseId: string, preferredLessonId: string 
         setState({
           courseOutline: null,
           currentLesson: null,
-          error: error instanceof LearningApiError ? error.message : '目前無法取得課程內容，請稍後再試。',
+          error: error instanceof LearningApiError ? error.message : '課程內容暫時載不進來，請稍後再試。',
           isLoading: false,
         })
       })
@@ -75,7 +75,7 @@ export function useCoursePlayerData(courseId: string, preferredLessonId: string 
           : {
               ...current,
               currentLesson: null,
-              error: error instanceof LearningApiError ? error.message : '目前無法取得單元內容，請稍後再試。',
+              error: error instanceof LearningApiError ? error.message : '單元內容暫時載不進來，請稍後再試。',
               isLoading: false,
             })
       })

@@ -48,8 +48,8 @@ export function AuthenticationDialog({ isOpen, message, mode, onClose, onSubmit 
       if (activeMode === 'forgot-password') {
         const result = await requestPasswordReset({ email })
         setSuccess(result.resetToken
-          ? `Beta 測試模式已準備好重設流程，請在 ${result.expiresInMinutes} 分鐘內設定新密碼。`
-          : '如果此信箱有帳戶，我們已準備好密碼重設流程。')
+          ? `Beta 測試模式已準備好，請在 ${result.expiresInMinutes} 分鐘內設定新密碼。`
+          : '如果這個信箱有帳戶，我們會準備密碼重設流程。')
         setPassword('')
         if (result.resetToken) {
           setResetToken(result.resetToken)
@@ -71,7 +71,7 @@ export function AuthenticationDialog({ isOpen, message, mode, onClose, onSubmit 
       setPassword('')
       onClose()
     } catch (reason) {
-      setError(reason instanceof AuthApiError ? reason.message : '暫時無法完成帳戶操作，請稍後再試。')
+      setError(reason instanceof AuthApiError ? reason.message : '現在暫時處理不了帳戶操作，請晚點再試。')
     } finally {
       setIsSubmitting(false)
     }
@@ -81,25 +81,25 @@ export function AuthenticationDialog({ isOpen, message, mode, onClose, onSubmit 
   const isRequestingPasswordReset = activeMode === 'forgot-password'
   const isResettingPassword = activeMode === 'reset-password'
   const summary = isRegistering
-    ? '註冊後可加入課程，並將播放進度同步到你的帳戶。'
+    ? '註冊後可以加入課程，播放進度也會跟著帳戶同步。'
     : isRequestingPasswordReset
-      ? '輸入註冊信箱後，Beta 測試模式會直接帶你完成密碼重設；正式寄信服務接上後會改由信件傳送連結。'
+      ? '輸入註冊信箱。Beta 測試模式會直接帶你重設；之後接上寄信服務，就會改寄重設連結。'
       : isResettingPassword
-        ? '請設定一組新的密碼，完成後再重新登入。'
-        : message || '登入後可從上次停留的單元繼續學習。'
+        ? '輸入新密碼，完成後再用新密碼登入。'
+        : message || '登入後可以接著上次停下的地方繼續。'
   const title = isRegistering
-    ? '建立帳戶，開始累積學習紀錄'
+    ? '先建立帳戶，進度才留得住'
     : isRequestingPasswordReset
-      ? '重設你的登入密碼'
+      ? '重設登入密碼'
       : isResettingPassword
-        ? '設定新的密碼'
-        : '登入，接續你的學習'
+        ? '設定新密碼'
+        : '登入後繼續學'
   const submitLabel = isSubmitting
     ? '處理中…'
     : isRegistering
       ? '建立免費帳戶'
       : isRequestingPasswordReset
-        ? '取得重設密碼流程'
+        ? '取得重設流程'
         : isResettingPassword
           ? '更新密碼'
           : '登入並繼續學習'

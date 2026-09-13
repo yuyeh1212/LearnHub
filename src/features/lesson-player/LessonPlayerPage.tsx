@@ -50,19 +50,19 @@ export function LessonPlayerPage({ accessToken, authUser, course, chapters, curr
     : isCurrentLessonComplete ? '已標記完成' : '標記為已完成'
   const startGate: LessonStartGate | null = playback.accessState === 'guest'
     ? {
-        actionLabel: '登入後開始學習',
-        description: '登入後即可加入課程，並在所有裝置接續觀看。',
-        eyebrow: '保存學習進度',
+        actionLabel: '登入後開始學',
+        description: '登入後可以加入課程，之後在不同裝置也能接著看。',
+        eyebrow: '保留學習進度',
         onAction: () => {
           onRequestAuthentication()
           return false
         },
-        title: '登入後開始這門課',
+        title: '登入後再開始這門課',
       }
     : playback.accessState === 'not-enrolled'
       ? {
-          actionLabel: '加入課程並開始播放',
-          description: '只需加入一次，之後會自動保存進度並顯示在「我的學習」。',
+          actionLabel: '加入課程並播放',
+          description: '加入一次就好。之後會自動保存進度，也會出現在「我的學習」。',
           error: playback.syncError || undefined,
           eyebrow: '開始你的學習',
           isPending: playback.isEnrolling,
@@ -86,7 +86,7 @@ export function LessonPlayerPage({ accessToken, authUser, course, chapters, curr
   const handleComplete = () => {
     if (!canTrackProgress) return
     playback.setLessonCompletion(currentLesson.id, !isCurrentLessonComplete)
-    setNotice(isCurrentLessonComplete ? '已恢復為進行中。' : '已標記完成。')
+    setNotice(isCurrentLessonComplete ? '已改回進行中。' : '已標記完成。')
   }
 
   const handleVideoEnded = () => {
@@ -97,10 +97,10 @@ export function LessonPlayerPage({ accessToken, authUser, course, chapters, curr
     playback.setLessonCompletion(currentLesson.id, true)
     if (nextLesson) {
       selectLesson(nextLesson.id)
-      setNotice(`已完成 ${currentLesson.title}，已切換至下一單元：${nextLesson.title}。`)
+      setNotice(`已完成 ${currentLesson.title}，接著看下一單元：${nextLesson.title}。`)
       return
     }
-    setNotice('恭喜完成本課程最後一個單元。')
+    setNotice('這門課的最後一個單元已完成。')
   }
 
   return (
@@ -108,14 +108,14 @@ export function LessonPlayerPage({ accessToken, authUser, course, chapters, curr
       <a className="skip-link" href="#lesson-content">跳至主要內容</a>
       <SiteHeader authUser={authUser} mode="player" onRegister={onRegister} onSignIn={onSignIn} onSignOut={onSignOut} />
       <main id="lesson-content" className="lesson-shell">
-        <nav className="breadcrumbs" aria-label="麵包屑"><a href="#home">探索課程</a><span>/</span><a href="#home">{course.title}</a><span>/</span><span>{currentOutlineLesson?.chapterTitle}</span></nav>
+        <nav className="breadcrumbs" aria-label="麵包屑"><a href="#home">課程首頁</a><span>/</span><a href="#home">{course.title}</a><span>/</span><span>{currentOutlineLesson?.chapterTitle}</span></nav>
         <div className="lesson-layout">
           <section className="lesson-main" aria-labelledby="lesson-title">
             <LessonVideoPlayer lesson={currentLesson} isLoadingProgress={playback.accessState === 'checking' && !(currentLesson.id in playback.lessonPositionSeconds)} isRefreshingSource={isRefreshingContent} savedPositionSeconds={playback.lessonPositionSeconds[currentLesson.id] ?? 0} startGate={startGate} onEnded={handleVideoEnded} onPause={playback.flushProgress} onPositionChange={(seconds) => playback.saveLessonPosition(currentLesson.id, seconds)} onRefreshSource={onRefreshContentAccess} />
             <div className="lesson-content">
-              {playback.accessState === 'checking' && <p className="learning-sync-status" role="status">正在取得你的學習進度…</p>}
-              {playback.accessState === 'enrolled' && <p className="learning-sync-status learning-sync-status--ready" role="status">進度已同步至 {authUser?.displayName ?? '你的帳戶'}。</p>}
-              {(playback.accessState === 'enrolled' && playback.syncError) || playback.accessState === 'error' ? <p className="learning-sync-error" role="alert">{playback.syncError || '目前無法取得你的學習進度。'}</p> : null}
+              {playback.accessState === 'checking' && <p className="learning-sync-status" role="status">正在取得上次的學習進度…</p>}
+              {playback.accessState === 'enrolled' && <p className="learning-sync-status learning-sync-status--ready" role="status">進度已同步到 {authUser?.displayName ?? '你的帳戶'}。</p>}
+              {(playback.accessState === 'enrolled' && playback.syncError) || playback.accessState === 'error' ? <p className="learning-sync-error" role="alert">{playback.syncError || '學習進度暫時載不進來。'}</p> : null}
               <div className="lesson-content__heading"><div><p>{currentOutlineLesson?.chapterTitle}　·　{formatDuration(currentLesson.durationSeconds)} · 影片課程</p><h1 id="lesson-title">{currentLesson.title}</h1></div><Button disabled={!canTrackProgress} title={canTrackProgress ? undefined : '請先加入課程'} variant={isCurrentLessonComplete ? 'secondary' : 'primary'} onClick={handleComplete}>{completionButtonLabel}</Button></div>
               {notice && <p className="lesson-notice" role="status">{notice}</p>}
               <p className="lesson-content__summary">{currentLesson.description}</p>

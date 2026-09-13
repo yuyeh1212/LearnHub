@@ -4,7 +4,7 @@ LearnHub 是 React + Vite 前端與 Express + PostgreSQL API 組成的學習平�
 
 ## 啟動
 
-第一次使用時，先複製 `.env.example` 為 `.env`，依 [資料庫設定](docs/database-setup.md) 套用四個 migration、執行本機 seed，並準備私有展示內容：
+第一次使用時，先複製 `.env.example` 為 `.env`，依 [資料庫設定](docs/database-setup.md) 套用五個 migration、執行本機 seed，並準備私有展示內容：
 
 ```powershell
 .\scripts\prepare-local-content.ps1

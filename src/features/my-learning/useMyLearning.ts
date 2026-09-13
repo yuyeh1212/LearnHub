@@ -43,7 +43,7 @@ export function useMyLearning(accessToken: string | null) {
             ? '登入狀態已過期，請重新登入。'
             : error instanceof LearningApiError
               ? error.message
-              : '目前無法取得學習紀錄，請稍後再試。',
+              : '學習紀錄暫時載不進來，請稍後再試。',
           isLoading: false,
           isUnauthorized,
           learningCourses: [],

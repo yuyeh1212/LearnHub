@@ -1,6 +1,6 @@
 # 資料庫基礎
 
-LearnHub 使用 PostgreSQL。初始結構定義於 `db/migrations/0001_learning_core.sql`，學習狀態擴充定義於 `db/migrations/0002_course_learning_states.sql`，私有內容物件定義於 `db/migrations/0003_private_content_assets.sql`，密碼重設 token 定義於 `db/migrations/0004_password_reset_tokens.sql`；migration 目前仍需依序手動執行。
+LearnHub 使用 PostgreSQL。初始結構定義於 `db/migrations/0001_learning_core.sql`，學習狀態擴充定義於 `db/migrations/0002_course_learning_states.sql`，私有內容物件定義於 `db/migrations/0003_private_content_assets.sql`，密碼重設 token 定義於 `db/migrations/0004_password_reset_tokens.sql`，展示課程文案更新定義於 `db/migrations/0005_refresh_demo_copy.sql`；migration 目前仍需依序手動執行。
 
 ## 本輪建立的資料模型
 
@@ -31,6 +31,6 @@ LearnHub 使用 PostgreSQL。初始結構定義於 `db/migrations/0001_learning_
 
 ## 本機展示資料
 
-`db/seeds/local-demo-content.sql` 只供本機開發展示課程目錄與播放器。它不含帳號、密碼或選課紀錄，也不應套用到正式環境。要讓首頁與播放器取得資料，請先依序完成四個 migration、執行種子檔，再執行 `scripts/prepare-local-content.ps1` 準備被 Git 忽略的本機私有檔案。
+`db/seeds/local-demo-content.sql` 只供本機開發展示課程目錄與播放器。它不含帳號、密碼或選課紀錄，也不應套用到正式環境。要讓首頁與播放器取得資料，請先依序完成五個 migration、執行種子檔，再執行 `scripts/prepare-local-content.ps1` 準備被 Git 忽略的本機私有檔案。
 
 執行本機 API 時，`.env` 的 `VITE_API_BASE_URL` 可維持為 `http://127.0.0.1:3001/api/v1`。它是瀏覽器可見的公開設定，只能放 API 位址，不能放 JWT、資料庫帳密或其他私密資訊。

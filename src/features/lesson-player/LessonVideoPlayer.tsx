@@ -162,7 +162,7 @@ export function LessonVideoPlayer({ lesson, isLoadingProgress, isRefreshingSourc
       <div className="player__top"><span>LESSON {lesson.id}</span><span>{formatPlaybackTime(savedPositionSeconds)} 已觀看</span></div>
       {!hasMediaError && !isPreparingPlayback && <button className="play-button" type="button" aria-label={isPlaying ? '暫停影片' : '播放影片'} onClick={handleTogglePlayback}><i /></button>}
       {!hasMediaError && startGate && <div className="lesson-video-player__gate"><div><span className="lesson-video-player__gate-eyebrow">{startGate.eyebrow}</span><h2>{startGate.title}</h2><p>{startGate.description}</p>{startGate.error && <p className="lesson-video-player__gate-error" role="alert">{startGate.error}</p>}<button type="button" disabled={isGatePending} onClick={() => void handleStartLearning()}>{isGatePending ? startGate.pendingLabel ?? '處理中…' : startGate.actionLabel}</button></div></div>}
-      {!hasMediaError && !startGate && (isLoadingProgress || isRestoringPosition) && <div className="lesson-video-player__restoring" role="status"><span aria-hidden="true" /><p>{isLoadingProgress ? '正在取得上次進度…' : '正在接續上次進度…'}</p></div>}
+      {!hasMediaError && !startGate && (isLoadingProgress || isRestoringPosition) && <div className="lesson-video-player__restoring" role="status"><span aria-hidden="true" /><p>{isLoadingProgress ? '正在取得上次進度…' : '正在回到上次看到的位置…'}</p></div>}
       {hasMediaError && <div className="lesson-video-player__error" role="alert"><p>影片授權可能已過期，請重新取得播放連結。</p><button type="button" disabled={isRefreshingSource} onClick={handleRetry}>{isRefreshingSource ? '重新取得中…' : '重新取得播放連結'}</button></div>}
     </div>
   )

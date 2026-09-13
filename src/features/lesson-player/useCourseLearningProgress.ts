@@ -156,7 +156,7 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
           return
         }
         setAccessState('error')
-        setSyncError(error instanceof Error ? error.message : '目前無法取得你的學習進度。')
+        setSyncError(error instanceof Error ? error.message : '學習進度暫時載不進來。')
       })
 
     return () => controller.abort()
@@ -314,7 +314,7 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
           setAccessState('enrolled')
           return true
         } catch (recoveryError) {
-          setSyncError(recoveryError instanceof Error ? recoveryError.message : '目前無法取得你的學習進度。')
+          setSyncError(recoveryError instanceof Error ? recoveryError.message : '學習進度暫時載不進來。')
           return false
         }
       }
