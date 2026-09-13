@@ -11,5 +11,11 @@
       "source": "/api/(.*)",
       "destination": "/api"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/v1/cron/supabase-heartbeat",
+      "schedule": "0 3 * * *"
+    }
   ]
 }

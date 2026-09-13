@@ -13,6 +13,7 @@ const environmentSchema = z.object({
   CONTENT_SIGNING_SECRET: z.string().min(32).optional(),
   CONTENT_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
   CONTENT_STORAGE_DRIVER: z.enum(['local', 'supabase']).default('local'),
+  CRON_SECRET: z.string().min(16).optional(),
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_SECRET_KEY: z.string().min(1).optional(),
   SUPABASE_STORAGE_BUCKET: z.string().regex(/^[a-z0-9][a-z0-9._-]{1,99}$/).default('learnhub-content'),
@@ -29,6 +30,7 @@ export type AppConfig = {
   contentSigningSecret: string
   contentAccessTtlSeconds: number
   contentStorageDriver: 'local' | 'supabase'
+  cronSecret: string | null
   supabaseUrl: string | null
   supabaseSecretKey: string | null
   supabaseStorageBucket: string
@@ -63,6 +65,7 @@ export function loadConfig(environment = process.env): AppConfig {
     contentSigningSecret: parsed.data.CONTENT_SIGNING_SECRET ?? parsed.data.JWT_SECRET,
     contentAccessTtlSeconds: parsed.data.CONTENT_ACCESS_TTL_SECONDS,
     contentStorageDriver: parsed.data.CONTENT_STORAGE_DRIVER,
+    cronSecret: parsed.data.CRON_SECRET ?? null,
     supabaseUrl: parsed.data.SUPABASE_URL ?? null,
     supabaseSecretKey: parsed.data.SUPABASE_SECRET_KEY ?? null,
     supabaseStorageBucket: parsed.data.SUPABASE_STORAGE_BUCKET,

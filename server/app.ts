@@ -16,6 +16,7 @@ import { PostgresContentRepository } from './content/content.repository.js'
 import { LocalContentStorage } from './content/content-storage.js'
 import { createContentRouter } from './content/content.router.js'
 import { SupabaseContentAccessService } from './content/supabase-content-access.service.js'
+import { createCronRouter } from './cron/cron.router.js'
 
 type AppDependencies = Pick<AppConfig,
   | 'contentAccessTtlSeconds'
@@ -23,6 +24,7 @@ type AppDependencies = Pick<AppConfig,
   | 'contentStorageRoot'
   | 'contentStorageDriver'
   | 'corsOrigin'
+  | 'cronSecret'
   | 'jwtSecret'
   | 'publicApiBaseUrl'
   | 'supabaseSecretKey'
@@ -35,6 +37,7 @@ type AppDependencies = Pick<AppConfig,
 export function createApp({
   pool,
   corsOrigin,
+  cronSecret,
   jwtSecret,
   publicApiBaseUrl,
   contentStorageRoot,
@@ -93,6 +96,7 @@ export function createApp({
     repository: new PostgresAuthRepository(pool),
     jwtSecret,
   }))
+  app.use('/api/v1/cron', createCronRouter({ cronSecret, pool }))
   app.use('/api/v1', createLearningProgressRouter(new LearningProgressRepository(pool), jwtSecret))
 
   app.use((request, _response, next) => {

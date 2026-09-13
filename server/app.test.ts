@@ -12,6 +12,7 @@ function createTestApp(pool: Pool) {
     contentStorageDriver: 'local',
     contentStorageRoot: process.cwd(),
     corsOrigin: 'http://127.0.0.1:4173',
+    cronSecret: 'local-test-cron-secret',
     jwtSecret: 'jwt-secret-that-is-at-least-32-characters',
     publicApiBaseUrl: 'http://127.0.0.1:3001/api/v1',
     supabaseSecretKey: null,
@@ -104,5 +105,29 @@ test('auth login and registration endpoints are rate limited', async () => {
     assert.equal(limitedRegister.headers.get('ratelimit-limit'), '5')
     assert.ok(limitedRegister.headers.get('retry-after'))
     assert.equal(await readProblemCode(limitedRegister), 'RATE_LIMIT_EXCEEDED')
+  })
+})
+
+test('supabase heartbeat cron endpoint requires cron authorization', async () => {
+  let heartbeatChecks = 0
+  const pool = {
+    query: async () => {
+      heartbeatChecks += 1
+      return { rows: [{ one: 1 }] }
+    },
+  } as unknown as Pool
+
+  await withTestServer(pool, async (baseUrl) => {
+    const unauthorized = await fetch(`${baseUrl}/api/v1/cron/supabase-heartbeat`)
+    assert.equal(unauthorized.status, 401)
+    assert.equal(await readProblemCode(unauthorized), 'CRON_UNAUTHORIZED')
+    assert.equal(heartbeatChecks, 0)
+
+    const authorized = await fetch(`${baseUrl}/api/v1/cron/supabase-heartbeat`, {
+      headers: { Authorization: 'Bearer local-test-cron-secret' },
+    })
+    assert.equal(authorized.status, 200)
+    assert.deepEqual(await authorized.json(), { status: 'ok' })
+    assert.equal(heartbeatChecks, 1)
   })
 })

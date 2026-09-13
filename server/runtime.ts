@@ -10,6 +10,7 @@ export function createRuntime(environment = process.env) {
   const app = createApp({
     pool,
     corsOrigin: config.corsOrigin,
+    cronSecret: config.cronSecret,
     jwtSecret: config.jwtSecret,
     publicApiBaseUrl: config.publicApiBaseUrl,
     contentStorageRoot: config.contentStorageRoot,
