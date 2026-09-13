@@ -9,18 +9,18 @@ import {
 } from '../../lib/learningApi'
 import {
   clearLearningProgressCache,
+  readPendingLearningProgressWrites,
   readLearningProgressCache,
   writeLearningProgressCache,
+  writePendingLearningProgressWrites,
   type CachedLearningProgress,
   type CachedLessonPosition,
+  type PendingLessonProgressWrite,
 } from './learningProgressCache'
 
 export type LearningAccessState = 'checking' | 'enrolled' | 'guest' | 'not-enrolled' | 'error'
 
-type PendingLessonProgress = {
-  completed: boolean
-  positionSeconds: number
-}
+type PendingLessonProgress = PendingLessonProgressWrite
 
 function toCompletedLessonIds(progress: CourseProgress) {
   return progress.lessons.filter((lesson) => lesson.completedAt).map((lesson) => lesson.lessonId)
@@ -40,6 +40,7 @@ function getCachedPositionMap(cache: CachedLearningProgress | null, lessonIds: s
 export function useCourseLearningProgress(courseId: string, lessonIds: string[], accessToken: string | null, userId: string | null) {
   const lessonKey = useMemo(() => lessonIds.join(':'), [lessonIds])
   const initialCache = useMemo(() => readLearningProgressCache(userId, courseId), [courseId, lessonKey, userId])
+  const initialPendingWrites = useMemo(() => readPendingLearningProgressWrites(userId, courseId), [courseId, userId])
   const initialCurrentLessonId = initialCache?.currentLessonId && lessonIds.includes(initialCache.currentLessonId)
     ? initialCache.currentLessonId
     : lessonIds[0] ?? null
@@ -50,11 +51,15 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
   const [lessonPositionSeconds, setLessonPositionSeconds] = useState<Record<string, number>>(initialLessonPositions)
   const [syncError, setSyncError] = useState('')
   const [isEnrolling, setIsEnrolling] = useState(false)
-  const pendingWritesRef = useRef(new Map<string, PendingLessonProgress>())
+  const pendingWritesRef = useRef(new Map<string, PendingLessonProgress>(Object.entries(initialPendingWrites)))
   const completedLessonIdsRef = useRef<string[]>([])
   const lessonPositionSecondsRef = useRef<Record<string, number>>(initialLessonPositions)
   const cachedProgressRef = useRef<CachedLearningProgress | null>(initialCache)
   const writeTimerRef = useRef<number | null>(null)
+
+  const persistPendingWrites = useCallback(() => {
+    writePendingLearningProgressWrites(userId, courseId, Object.fromEntries(pendingWritesRef.current.entries()))
+  }, [courseId, userId])
 
   const applyProgress = useCallback((progress: CourseProgress) => {
     const cachedProgress = readLearningProgressCache(userId, courseId)
@@ -122,7 +127,7 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
     setCompletedLessonIds([])
     setLessonPositionSeconds(nextLessonPositionSeconds)
     setSyncError('')
-    pendingWritesRef.current.clear()
+    pendingWritesRef.current = new Map(Object.entries(readPendingLearningProgressWrites(userId, courseId)))
   }, [courseId, lessonKey, userId])
 
   useEffect(() => {
@@ -160,34 +165,66 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
   const flushPendingWrites = useCallback(async (keepalive = false) => {
     if (!accessToken || accessState !== 'enrolled') return
     const pendingWrites = [...pendingWritesRef.current.entries()]
-    pendingWritesRef.current.clear()
+    if (pendingWrites.length === 0) return
     if (writeTimerRef.current) {
       window.clearTimeout(writeTimerRef.current)
       writeTimerRef.current = null
     }
 
-    const results = await Promise.allSettled(pendingWrites.map(([lessonId, progress]) => updateLessonProgress(
-      lessonId,
-      progress,
-      accessToken,
-      keepalive,
-    )))
-    if (results.some((result) => result.status === 'rejected')) {
+    const results = await Promise.allSettled(pendingWrites.map(([lessonId, progress]) => {
+      const { completed, positionSeconds } = progress
+      return updateLessonProgress(lessonId, { completed, positionSeconds }, accessToken, keepalive)
+    }))
+    let hasFailedWrite = false
+    results.forEach((result, index) => {
+      const [lessonId, flushedProgress] = pendingWrites[index]
+      if (result.status === 'rejected') {
+        hasFailedWrite = true
+        return
+      }
+
+      const currentProgress = pendingWritesRef.current.get(lessonId)
+      if (currentProgress && currentProgress.updatedAt <= flushedProgress.updatedAt) {
+        pendingWritesRef.current.delete(lessonId)
+      }
+    })
+    persistPendingWrites()
+    if (hasFailedWrite) {
       setSyncError('觀看位置暫時無法同步，請保持頁面開啟後再試一次。')
+      return
     }
-  }, [accessState, accessToken])
+    setSyncError('')
+  }, [accessState, accessToken, persistPendingWrites])
+
+  useEffect(() => {
+    if (accessState === 'enrolled' && accessToken && pendingWritesRef.current.size > 0) {
+      void flushPendingWrites()
+    }
+  }, [accessState, accessToken, flushPendingWrites])
 
   useEffect(() => {
     const flushBeforeLeaving = () => { void flushPendingWrites(true) }
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') flushBeforeLeaving()
+      if (document.visibilityState === 'hidden') {
+        flushBeforeLeaving()
+        return
+      }
+
+      if (document.visibilityState === 'visible') {
+        void flushPendingWrites()
+      }
     }
+    const retryPendingWrites = () => { void flushPendingWrites() }
 
     window.addEventListener('pagehide', flushBeforeLeaving)
+    window.addEventListener('focus', retryPendingWrites)
+    window.addEventListener('online', retryPendingWrites)
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       window.removeEventListener('pagehide', flushBeforeLeaving)
+      window.removeEventListener('focus', retryPendingWrites)
+      window.removeEventListener('online', retryPendingWrites)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       if (writeTimerRef.current) window.clearTimeout(writeTimerRef.current)
       void flushPendingWrites()
@@ -197,9 +234,10 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
   const queueProgressWrite = useCallback((lessonId: string, progress: PendingLessonProgress) => {
     if (!accessToken || accessState !== 'enrolled') return
     pendingWritesRef.current.set(lessonId, progress)
+    persistPendingWrites()
     if (writeTimerRef.current) return
     writeTimerRef.current = window.setTimeout(() => { void flushPendingWrites() }, 4_000)
-  }, [accessState, accessToken, flushPendingWrites])
+  }, [accessState, accessToken, flushPendingWrites, persistPendingWrites])
 
   const selectLesson = useCallback((lessonId: string) => {
     if (!lessonIds.includes(lessonId)) return
@@ -238,6 +276,7 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
       queueProgressWrite(lessonId, {
         completed: completedLessonIdsRef.current.includes(lessonId),
         positionSeconds,
+        updatedAt: Date.now(),
       })
     }
   }, [accessState, accessToken, courseId, queueProgressWrite, userId])
@@ -253,7 +292,7 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
       : completedLessonIdsRef.current.filter((id) => id !== lessonId)
     completedLessonIdsRef.current = next
     setCompletedLessonIds(next)
-    queueProgressWrite(lessonId, { completed, positionSeconds: lessonPositionSecondsRef.current[lessonId] ?? 0 })
+    queueProgressWrite(lessonId, { completed, positionSeconds: lessonPositionSecondsRef.current[lessonId] ?? 0, updatedAt: Date.now() })
     void flushPendingWrites()
   }, [accessState, accessToken, flushPendingWrites, queueProgressWrite])
 

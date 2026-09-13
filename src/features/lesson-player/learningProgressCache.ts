@@ -11,8 +11,18 @@ export interface CachedLearningProgress {
   lessonPositions: Record<string, CachedLessonPosition>
 }
 
+export interface PendingLessonProgressWrite {
+  completed: boolean
+  positionSeconds: number
+  updatedAt: number
+}
+
 function getStorageKey(userId: string, courseId: string) {
   return `${STORAGE_PREFIX}:${userId}:${courseId}`
+}
+
+function getPendingWritesStorageKey(userId: string, courseId: string) {
+  return `${STORAGE_PREFIX}:pending-writes:${userId}:${courseId}`
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -37,6 +47,28 @@ function parseLessonPositions(value: unknown) {
     }
 
     return [[lessonId, { positionSeconds: Math.floor(positionSeconds), updatedAt }]]
+  }))
+}
+
+function parsePendingWrites(value: unknown) {
+  if (!isRecord(value)) return {}
+
+  return Object.fromEntries(Object.entries(value).flatMap(([lessonId, entry]) => {
+    if (!isRecord(entry)) return []
+    const { completed, positionSeconds, updatedAt } = entry
+    if (
+      typeof completed !== 'boolean'
+      || typeof positionSeconds !== 'number'
+      || !Number.isFinite(positionSeconds)
+      || positionSeconds < 0
+      || typeof updatedAt !== 'number'
+      || !Number.isFinite(updatedAt)
+      || updatedAt < 0
+    ) {
+      return []
+    }
+
+    return [[lessonId, { completed, positionSeconds: Math.floor(positionSeconds), updatedAt }]]
   }))
 }
 
@@ -69,11 +101,42 @@ export function writeLearningProgressCache(userId: string | null, courseId: stri
   }
 }
 
+export function readPendingLearningProgressWrites(userId: string | null, courseId: string): Record<string, PendingLessonProgressWrite> {
+  if (!userId) return {}
+
+  try {
+    return parsePendingWrites(JSON.parse(window.localStorage.getItem(getPendingWritesStorageKey(userId, courseId)) ?? 'null'))
+  } catch {
+    return {}
+  }
+}
+
+export function writePendingLearningProgressWrites(
+  userId: string | null,
+  courseId: string,
+  writes: Record<string, PendingLessonProgressWrite>,
+) {
+  if (!userId) return
+
+  try {
+    const storageKey = getPendingWritesStorageKey(userId, courseId)
+    if (Object.keys(writes).length === 0) {
+      window.localStorage.removeItem(storageKey)
+      return
+    }
+
+    window.localStorage.setItem(storageKey, JSON.stringify(writes))
+  } catch {
+    // Keep the in-memory queue active when local storage is unavailable.
+  }
+}
+
 export function clearLearningProgressCache(userId: string | null, courseId: string) {
   if (!userId) return
 
   try {
     window.localStorage.removeItem(getStorageKey(userId, courseId))
+    window.localStorage.removeItem(getPendingWritesStorageKey(userId, courseId))
   } catch {
     // Ignore storage restrictions and keep the server as the source of truth.
   }
