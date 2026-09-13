@@ -35,7 +35,13 @@ export type AppConfig = {
 }
 
 export function loadConfig(environment = process.env): AppConfig {
-  const parsed = environmentSchema.safeParse(environment)
+  const normalizedEnvironment = Object.fromEntries(
+    Object.entries(environment).map(([key, value]) => [
+      key,
+      typeof value === 'string' && value.trim() === '' ? undefined : value,
+    ]),
+  )
+  const parsed = environmentSchema.safeParse(normalizedEnvironment)
 
   if (!parsed.success) {
     const invalidFields = parsed.error.issues.map((issue) => issue.path.join('.')).join(', ')
