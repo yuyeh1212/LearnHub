@@ -11,6 +11,7 @@ import type {
   UpdateCourseProgressInput,
   UpsertLessonProgressInput,
 } from '../contracts/learning'
+import { notifyAuthSessionExpired } from './authSessionEvents'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:3001/api/v1'
 
@@ -61,6 +62,9 @@ async function request<T>(path: string, { accessToken, body, keepalive, method =
 
   if (!response.ok) {
     const problem: ProblemResponse | null = await response.json().catch(() => null)
+    if (response.status === 401 && accessToken) {
+      notifyAuthSessionExpired('unauthorized')
+    }
     throw new LearningApiError(problem?.detail || problem?.title || '課程服務暫時無法回應，請稍後再試。', response.status)
   }
 

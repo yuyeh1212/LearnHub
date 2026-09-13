@@ -6,6 +6,7 @@ import { LessonPlayerPage } from './features/lesson-player/LessonPlayerPage'
 import { readLearningProgressCache } from './features/lesson-player/learningProgressCache'
 import { useCoursePlayerData } from './features/lesson-player/useCoursePlayerData'
 import { MyLearningPage } from './features/my-learning/MyLearningPage'
+import { subscribeAuthSessionExpired } from './lib/authSessionEvents'
 
 type View = { name: 'home' } | { name: 'learning' } | { courseId: string; name: 'lesson' }
 
@@ -44,6 +45,7 @@ function LessonRoute({ accessToken, courseId, onRegister, onRequestAuthenticatio
 export function App() {
   const [view, setView] = useState<View>(getViewFromHash)
   const [dialogMode, setDialogMode] = useState<'login' | 'register' | null>(null)
+  const [dialogMessage, setDialogMessage] = useState('')
   const auth = useAuthSession()
 
   useEffect(() => {
@@ -52,13 +54,31 @@ export function App() {
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
-  const openSignIn = () => setDialogMode('login')
-  const openRegister = () => setDialogMode('register')
+  useEffect(() => subscribeAuthSessionExpired(() => {
+    setDialogMessage('登入狀態已過期，請重新登入後繼續。你目前所在的頁面會保留。')
+    setDialogMode('login')
+  }), [])
+
+  const closeDialog = () => {
+    setDialogMessage('')
+    setDialogMode(null)
+  }
+
+  const openSignIn = () => {
+    setDialogMessage('')
+    setDialogMode('login')
+  }
+
+  const openRegister = () => {
+    setDialogMessage('')
+    setDialogMode('register')
+  }
+
   const content = view.name === 'lesson'
     ? <LessonRoute accessToken={auth.accessToken} courseId={view.courseId} onRegister={openRegister} onRequestAuthentication={openSignIn} onSignIn={openSignIn} onSignOut={auth.signOut} user={auth.user} />
     : view.name === 'learning'
       ? <MyLearningPage accessToken={auth.accessToken} authUser={auth.user} isRestoringSession={auth.isRestoring} onRegister={openRegister} onSignIn={openSignIn} onSignOut={auth.signOut} />
       : <LandingPage authUser={auth.user} onRegister={openRegister} onSignIn={openSignIn} onSignOut={auth.signOut} />
 
-  return <>{content}<AuthenticationDialog isOpen={dialogMode !== null} mode={dialogMode ?? 'login'} onClose={() => setDialogMode(null)} onSubmit={async (mode, input) => { await auth.authenticate(mode, input) }} /></>
+  return <>{content}<AuthenticationDialog isOpen={dialogMode !== null} message={dialogMessage} mode={dialogMode ?? 'login'} onClose={closeDialog} onSubmit={async (mode, input) => { await auth.authenticate(mode, input) }} /></>
 }

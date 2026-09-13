@@ -1,4 +1,5 @@
 import type { AuthenticatedUser, AuthenticationResult } from '../contracts/auth'
+import { notifyAuthSessionExpired } from './authSessionEvents'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:3001/api/v1'
 
@@ -8,13 +9,20 @@ type ProblemResponse = {
 }
 
 export class AuthApiError extends Error {
-  constructor(message: string) {
+  readonly status?: number
+
+  constructor(message: string, status?: number) {
     super(message)
     this.name = 'AuthApiError'
+    this.status = status
   }
 }
 
-async function request<T>(path: string, options: RequestInit): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestInit,
+  requestOptions: { notifyOnUnauthorized?: boolean } = {},
+): Promise<T> {
   let response: Response
 
   try {
@@ -25,7 +33,10 @@ async function request<T>(path: string, options: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const problem: ProblemResponse | null = await response.json().catch(() => null)
-    throw new AuthApiError(problem?.detail || problem?.title || '帳戶服務暫時無法回應，請稍後再試。')
+    if (response.status === 401 && requestOptions.notifyOnUnauthorized) {
+      notifyAuthSessionExpired('unauthorized')
+    }
+    throw new AuthApiError(problem?.detail || problem?.title || '帳戶服務暫時無法回應，請稍後再試。', response.status)
   }
 
   return response.json() as Promise<T>
@@ -53,5 +64,5 @@ export function login(input: { email: string; password: string }) {
 export function getCurrentUser(accessToken: string) {
   return request<AuthenticatedUser>('/auth/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
-  })
+  }, { notifyOnUnauthorized: true })
 }
