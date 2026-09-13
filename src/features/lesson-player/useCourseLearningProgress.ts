@@ -7,6 +7,13 @@ import {
   updateCurrentLesson,
   updateLessonProgress,
 } from '../../lib/learningApi'
+import {
+  clearLearningProgressCache,
+  readLearningProgressCache,
+  writeLearningProgressCache,
+  type CachedLearningProgress,
+  type CachedLessonPosition,
+} from './learningProgressCache'
 
 export type LearningAccessState = 'checking' | 'enrolled' | 'guest' | 'not-enrolled' | 'error'
 
@@ -15,49 +22,108 @@ type PendingLessonProgress = {
   positionSeconds: number
 }
 
-function toPositionMap(progress: CourseProgress) {
-  return Object.fromEntries(progress.lessons.map((lesson) => [lesson.lessonId, lesson.positionSeconds]))
-}
-
 function toCompletedLessonIds(progress: CourseProgress) {
   return progress.lessons.filter((lesson) => lesson.completedAt).map((lesson) => lesson.lessonId)
 }
 
-export function useCourseLearningProgress(courseId: string, lessonIds: string[], accessToken: string | null) {
+function createEmptyCache(): CachedLearningProgress {
+  return { currentLessonId: null, currentLessonUpdatedAt: 0, lessonPositions: {} }
+}
+
+function getCachedPositionMap(cache: CachedLearningProgress | null, lessonIds: string[]) {
+  return Object.fromEntries(lessonIds.flatMap((lessonId) => {
+    const position = cache?.lessonPositions[lessonId]
+    return position ? [[lessonId, position.positionSeconds]] : []
+  }))
+}
+
+export function useCourseLearningProgress(courseId: string, lessonIds: string[], accessToken: string | null, userId: string | null) {
   const lessonKey = useMemo(() => lessonIds.join(':'), [lessonIds])
+  const initialCache = useMemo(() => readLearningProgressCache(userId, courseId), [courseId, lessonKey, userId])
+  const initialCurrentLessonId = initialCache?.currentLessonId && lessonIds.includes(initialCache.currentLessonId)
+    ? initialCache.currentLessonId
+    : lessonIds[0] ?? null
+  const initialLessonPositions = getCachedPositionMap(initialCache, lessonIds)
   const [accessState, setAccessState] = useState<LearningAccessState>(accessToken ? 'checking' : 'guest')
-  const [currentLessonId, setCurrentLessonId] = useState<string | null>(lessonIds[0] ?? null)
+  const [currentLessonId, setCurrentLessonId] = useState<string | null>(initialCurrentLessonId)
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([])
-  const [lessonPositionSeconds, setLessonPositionSeconds] = useState<Record<string, number>>({})
+  const [lessonPositionSeconds, setLessonPositionSeconds] = useState<Record<string, number>>(initialLessonPositions)
   const [syncError, setSyncError] = useState('')
   const [isEnrolling, setIsEnrolling] = useState(false)
   const pendingWritesRef = useRef(new Map<string, PendingLessonProgress>())
   const completedLessonIdsRef = useRef<string[]>([])
-  const lessonPositionSecondsRef = useRef<Record<string, number>>({})
+  const lessonPositionSecondsRef = useRef<Record<string, number>>(initialLessonPositions)
+  const cachedProgressRef = useRef<CachedLearningProgress | null>(initialCache)
   const writeTimerRef = useRef<number | null>(null)
 
   const applyProgress = useCallback((progress: CourseProgress) => {
-    setCurrentLessonId(progress.currentLessonId && lessonIds.includes(progress.currentLessonId)
-      ? progress.currentLessonId
-      : lessonIds[0] ?? null)
+    const cachedProgress = readLearningProgressCache(userId, courseId)
+    const serverUpdatedAt = Date.parse(progress.updatedAt)
+    const shouldUseCachedCurrentLesson = Boolean(
+      cachedProgress?.currentLessonId
+      && lessonIds.includes(cachedProgress.currentLessonId)
+      && cachedProgress.currentLessonUpdatedAt > (Number.isFinite(serverUpdatedAt) ? serverUpdatedAt : 0),
+    )
+    const nextCurrentLessonId = shouldUseCachedCurrentLesson
+      ? cachedProgress?.currentLessonId ?? null
+      : progress.currentLessonId && lessonIds.includes(progress.currentLessonId)
+        ? progress.currentLessonId
+        : lessonIds[0] ?? null
     const nextCompletedLessonIds = toCompletedLessonIds(progress)
-    const nextLessonPositionSeconds = toPositionMap(progress)
+    const serverLessonProgress = new Map(progress.lessons.map((lesson) => [lesson.lessonId, lesson]))
+    const nextCachedLessonPositions: Record<string, CachedLessonPosition> = {}
+
+    for (const lessonId of lessonIds) {
+      const serverPosition = serverLessonProgress.get(lessonId)
+      const cachedPosition = cachedProgress?.lessonPositions[lessonId]
+      const parsedServerUpdatedAt = serverPosition ? Date.parse(serverPosition.updatedAt) : 0
+      nextCachedLessonPositions[lessonId] = cachedPosition && (
+        !serverPosition || cachedPosition.updatedAt > (Number.isFinite(parsedServerUpdatedAt) ? parsedServerUpdatedAt : 0)
+      )
+        ? cachedPosition
+        : serverPosition
+          ? {
+              positionSeconds: serverPosition.positionSeconds,
+              updatedAt: Number.isFinite(parsedServerUpdatedAt) ? parsedServerUpdatedAt : 0,
+            }
+          : { positionSeconds: 0, updatedAt: 0 }
+    }
+
+    const nextLessonPositionSeconds = Object.fromEntries(
+      Object.entries(nextCachedLessonPositions).map(([lessonId, position]) => [lessonId, position.positionSeconds]),
+    )
+    const nextCache: CachedLearningProgress = {
+      currentLessonId: nextCurrentLessonId,
+      currentLessonUpdatedAt: shouldUseCachedCurrentLesson
+        ? cachedProgress?.currentLessonUpdatedAt ?? 0
+        : Number.isFinite(serverUpdatedAt) ? serverUpdatedAt : 0,
+      lessonPositions: nextCachedLessonPositions,
+    }
+    cachedProgressRef.current = nextCache
+    writeLearningProgressCache(userId, courseId, nextCache)
+    setCurrentLessonId(nextCurrentLessonId)
     completedLessonIdsRef.current = nextCompletedLessonIds
     lessonPositionSecondsRef.current = nextLessonPositionSeconds
     setCompletedLessonIds(nextCompletedLessonIds)
     setLessonPositionSeconds(nextLessonPositionSeconds)
     setSyncError('')
-  }, [lessonKey])
+  }, [courseId, lessonKey, userId])
 
   useEffect(() => {
-    setCurrentLessonId(lessonIds[0] ?? null)
+    const cachedProgress = readLearningProgressCache(userId, courseId)
+    const nextCurrentLessonId = cachedProgress?.currentLessonId && lessonIds.includes(cachedProgress.currentLessonId)
+      ? cachedProgress.currentLessonId
+      : lessonIds[0] ?? null
+    const nextLessonPositionSeconds = getCachedPositionMap(cachedProgress, lessonIds)
+    cachedProgressRef.current = cachedProgress
+    setCurrentLessonId(nextCurrentLessonId)
     completedLessonIdsRef.current = []
-    lessonPositionSecondsRef.current = {}
+    lessonPositionSecondsRef.current = nextLessonPositionSeconds
     setCompletedLessonIds([])
-    setLessonPositionSeconds({})
+    setLessonPositionSeconds(nextLessonPositionSeconds)
     setSyncError('')
     pendingWritesRef.current.clear()
-  }, [courseId, lessonKey])
+  }, [courseId, lessonKey, userId])
 
   useEffect(() => {
     if (!accessToken) {
@@ -76,6 +142,11 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') return
         if (error instanceof LearningApiError && error.status === 403) {
+          clearLearningProgressCache(userId, courseId)
+          cachedProgressRef.current = null
+          lessonPositionSecondsRef.current = {}
+          setLessonPositionSeconds({})
+          setCurrentLessonId(lessonIds[0] ?? null)
           setAccessState('not-enrolled')
           return
         }
@@ -84,7 +155,7 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
       })
 
     return () => controller.abort()
-  }, [accessToken, applyProgress, courseId])
+  }, [accessToken, applyProgress, courseId, lessonKey, userId])
 
   const flushPendingWrites = useCallback(async (keepalive = false) => {
     if (!accessToken || accessState !== 'enrolled') return
@@ -134,31 +205,49 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
     if (!lessonIds.includes(lessonId)) return
     setCurrentLessonId(lessonId)
     if (accessToken && accessState === 'enrolled') {
+      const nextCache = {
+        ...(cachedProgressRef.current ?? createEmptyCache()),
+        currentLessonId: lessonId,
+        currentLessonUpdatedAt: Date.now(),
+      }
+      cachedProgressRef.current = nextCache
+      writeLearningProgressCache(userId, courseId, nextCache)
       void flushPendingWrites()
       void updateCurrentLesson(courseId, { currentLessonId: lessonId }, accessToken)
         .catch(() => setSyncError('目前單元暫時無法同步，請稍後再試。'))
     }
-  }, [accessState, accessToken, courseId, flushPendingWrites, lessonKey])
+  }, [accessState, accessToken, courseId, flushPendingWrites, lessonKey, userId])
 
   const saveLessonPosition = useCallback((lessonId: string, seconds: number) => {
+    if (!accessToken || accessState !== 'enrolled') return
     const positionSeconds = Math.max(0, Math.floor(seconds))
     if (lessonPositionSecondsRef.current[lessonId] === positionSeconds) return
     const next = { ...lessonPositionSecondsRef.current, [lessonId]: positionSeconds }
     lessonPositionSecondsRef.current = next
     setLessonPositionSeconds(next)
+    const nextCache = {
+      ...(cachedProgressRef.current ?? createEmptyCache()),
+      lessonPositions: {
+        ...(cachedProgressRef.current?.lessonPositions ?? {}),
+        [lessonId]: { positionSeconds, updatedAt: Date.now() },
+      },
+    }
+    cachedProgressRef.current = nextCache
+    writeLearningProgressCache(userId, courseId, nextCache)
     if (positionSeconds > 0) {
       queueProgressWrite(lessonId, {
         completed: completedLessonIdsRef.current.includes(lessonId),
         positionSeconds,
       })
     }
-  }, [queueProgressWrite])
+  }, [accessState, accessToken, courseId, queueProgressWrite, userId])
 
   const flushProgress = useCallback(() => {
     void flushPendingWrites()
   }, [flushPendingWrites])
 
   const setLessonCompletion = useCallback((lessonId: string, completed: boolean) => {
+    if (!accessToken || accessState !== 'enrolled') return
     const next = completed
       ? completedLessonIdsRef.current.includes(lessonId) ? completedLessonIdsRef.current : [...completedLessonIdsRef.current, lessonId]
       : completedLessonIdsRef.current.filter((id) => id !== lessonId)
@@ -166,7 +255,7 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
     setCompletedLessonIds(next)
     queueProgressWrite(lessonId, { completed, positionSeconds: lessonPositionSecondsRef.current[lessonId] ?? 0 })
     void flushPendingWrites()
-  }, [flushPendingWrites, queueProgressWrite])
+  }, [accessState, accessToken, flushPendingWrites, queueProgressWrite])
 
   const enroll = useCallback(async () => {
     if (!accessToken) return

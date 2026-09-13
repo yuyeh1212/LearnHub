@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AuthenticationDialog } from './features/auth/AuthenticationDialog'
 import { useAuthSession } from './features/auth/useAuthSession'
 import { LandingPage } from './features/landing/LandingPage'
 import { LessonPlayerPage } from './features/lesson-player/LessonPlayerPage'
+import { readLearningProgressCache } from './features/lesson-player/learningProgressCache'
 import { useCoursePlayerData } from './features/lesson-player/useCoursePlayerData'
 import { MyLearningPage } from './features/my-learning/MyLearningPage'
 
@@ -25,7 +26,11 @@ interface LessonRouteProps {
 }
 
 function LessonRoute({ accessToken, courseId, onRegister, onRequestAuthentication, onSignIn, onSignOut, user }: LessonRouteProps) {
-  const { courseOutline, currentLesson, error, isLoading, isRefreshingContent, refreshContentAccess, retry, selectLesson } = useCoursePlayerData(courseId)
+  const preferredLessonId = useMemo(
+    () => readLearningProgressCache(user?.id ?? null, courseId)?.currentLessonId ?? null,
+    [courseId, user?.id],
+  )
+  const { courseOutline, currentLesson, error, isLoading, isRefreshingContent, refreshContentAccess, retry, selectLesson } = useCoursePlayerData(courseId, preferredLessonId)
 
   if (isLoading) return <main className="app-data-state" role="status"><h1>正在載入課程</h1><p>請稍候，正在取得課程大綱與單元內容。</p></main>
 

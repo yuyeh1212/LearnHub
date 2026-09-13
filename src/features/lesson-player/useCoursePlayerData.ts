@@ -9,7 +9,7 @@ type CoursePlayerState = {
   isLoading: boolean
 }
 
-export function useCoursePlayerData(courseId: string) {
+export function useCoursePlayerData(courseId: string, preferredLessonId: string | null = null) {
   const [state, setState] = useState<CoursePlayerState>({
     courseOutline: null,
     currentLesson: null,
@@ -28,14 +28,15 @@ export function useCoursePlayerData(courseId: string) {
 
     void getCourseOutline(courseId, controller.signal)
       .then((courseOutline) => {
-        const firstLesson = courseOutline.chapters.flatMap((chapter) => chapter.lessons).at(0)
+        const lessons = courseOutline.chapters.flatMap((chapter) => chapter.lessons)
+        const firstLesson = lessons.at(0)
         if (!firstLesson) {
           setState({ courseOutline, currentLesson: null, error: '這門課目前還沒有可播放的單元。', isLoading: false })
           return
         }
 
         setState((current) => ({ ...current, courseOutline, isLoading: true }))
-        setSelectedLessonId(firstLesson.id)
+        setSelectedLessonId(lessons.some((lesson) => lesson.id === preferredLessonId) ? preferredLessonId : firstLesson.id)
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') {
@@ -51,7 +52,7 @@ export function useCoursePlayerData(courseId: string) {
       })
 
     return () => controller.abort()
-  }, [courseId, retryKey])
+  }, [courseId, preferredLessonId, retryKey])
 
   useEffect(() => {
     if (!selectedLessonId) {

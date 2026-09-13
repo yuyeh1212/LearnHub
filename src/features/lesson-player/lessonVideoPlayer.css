@@ -4,12 +4,18 @@
 .lesson-video-player .player__top { pointer-events: none; text-shadow: 0 1px 8px rgb(0 0 0 / 0.6); }
 .lesson-video-player .play-button { opacity: 1; }
 .lesson-video-player.player--playing .play-button { opacity: 0; pointer-events: none; }
+.lesson-video-player__restoring { position: absolute; z-index: 3; inset: 0; display: grid; place-content: center; justify-items: center; gap: var(--space-3); color: #fff; background: rgb(6 17 38 / 0.82); }
+.lesson-video-player__restoring span { width: 30px; height: 30px; border: 3px solid rgb(255 255 255 / 0.35); border-top-color: #fff; border-radius: 50%; animation: lesson-progress-spin 0.8s linear infinite; }
+.lesson-video-player__restoring p { margin: 0; font-weight: 800; }
 .lesson-video-player__error { position: absolute; z-index: 3; inset: 0; display: grid; place-content: center; gap: var(--space-3); padding: var(--space-6); text-align: center; background: rgb(6 17 38 / 0.92); }
 .lesson-video-player__error p { margin: 0; color: #fff; font-weight: 700; }
 .lesson-video-player__error button { justify-self: center; border: 1px solid rgb(255 255 255 / 0.4); border-radius: var(--radius-control); padding: 0.5rem 0.85rem; color: #fff; background: transparent; font-weight: 800; }
 .lesson-video-player__error button:hover { background: rgb(255 255 255 / 0.12); }
 .lesson-pager button:disabled { cursor: not-allowed; opacity: 0.45; }
 
+@keyframes lesson-progress-spin { to { transform: rotate(360deg); } }
+
 @media (prefers-reduced-motion: reduce) {
   .lesson-video-player .play-button { transition: none; }
+  .lesson-video-player__restoring span { animation: none; }
 }
