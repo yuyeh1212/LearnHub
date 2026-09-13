@@ -258,7 +258,7 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
   }, [accessState, accessToken, flushPendingWrites, queueProgressWrite])
 
   const enroll = useCallback(async () => {
-    if (!accessToken) return
+    if (!accessToken) return false
     setIsEnrolling(true)
     setSyncError('')
     try {
@@ -266,14 +266,21 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
       const progress = await getCourseProgress(courseId, accessToken)
       applyProgress(progress)
       setAccessState('enrolled')
+      return true
     } catch (error) {
       if (error instanceof LearningApiError && error.status === 409) {
-        const progress = await getCourseProgress(courseId, accessToken)
-        applyProgress(progress)
-        setAccessState('enrolled')
-        return
+        try {
+          const progress = await getCourseProgress(courseId, accessToken)
+          applyProgress(progress)
+          setAccessState('enrolled')
+          return true
+        } catch (recoveryError) {
+          setSyncError(recoveryError instanceof Error ? recoveryError.message : '目前無法取得你的學習進度。')
+          return false
+        }
       }
       setSyncError(error instanceof Error ? error.message : '目前無法加入課程，請稍後再試。')
+      return false
     } finally {
       setIsEnrolling(false)
     }

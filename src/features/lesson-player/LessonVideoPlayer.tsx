@@ -3,24 +3,37 @@ import type { LessonDetail } from '../../contracts/learning'
 import { formatPlaybackTime } from '../learning/formatPlaybackTime'
 import './lessonVideoPlayer.css'
 
+export interface LessonStartGate {
+  actionLabel: string
+  description: string
+  error?: string
+  eyebrow: string
+  isPending?: boolean
+  onAction: () => boolean | Promise<boolean>
+  pendingLabel?: string
+  title: string
+}
+
 interface LessonVideoPlayerProps {
   lesson: Pick<LessonDetail, 'id' | 'title' | 'videoUrl'>
   isLoadingProgress: boolean
   isRefreshingSource: boolean
   savedPositionSeconds: number
+  startGate: LessonStartGate | null
   onEnded: () => void
   onPause: () => void
   onPositionChange: (seconds: number) => void
   onRefreshSource: () => void
 }
 
-export function LessonVideoPlayer({ lesson, isLoadingProgress, isRefreshingSource, savedPositionSeconds, onEnded, onPause, onPositionChange, onRefreshSource }: LessonVideoPlayerProps) {
+export function LessonVideoPlayer({ lesson, isLoadingProgress, isRefreshingSource, savedPositionSeconds, startGate, onEnded, onPause, onPositionChange, onRefreshSource }: LessonVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const lastSavedPosition = useRef(Math.floor(savedPositionSeconds))
   const hasRestoredPosition = useRef(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [hasMediaError, setHasMediaError] = useState(false)
   const [isRestoringPosition, setIsRestoringPosition] = useState(savedPositionSeconds > 0)
+  const [isStartingLearning, setIsStartingLearning] = useState(false)
 
   useEffect(() => {
     lastSavedPosition.current = Math.floor(savedPositionSeconds)
@@ -28,6 +41,7 @@ export function LessonVideoPlayer({ lesson, isLoadingProgress, isRefreshingSourc
     setIsPlaying(false)
     setHasMediaError(false)
     setIsRestoringPosition(savedPositionSeconds > 0)
+    setIsStartingLearning(false)
   }, [lesson.id, lesson.videoUrl])
 
   const restoreSavedPosition = useCallback(() => {
@@ -73,7 +87,7 @@ export function LessonVideoPlayer({ lesson, isLoadingProgress, isRefreshingSourc
 
   const handleTogglePlayback = () => {
     const video = videoRef.current
-    if (!video || isLoadingProgress || isRestoringPosition) {
+    if (!video || startGate || isLoadingProgress || isRestoringPosition) {
       return
     }
 
@@ -108,7 +122,22 @@ export function LessonVideoPlayer({ lesson, isLoadingProgress, isRefreshingSourc
     setIsRestoringPosition(false)
   }
 
-  const isPreparingPlayback = isLoadingProgress || isRestoringPosition
+  const handleStartLearning = async () => {
+    if (!startGate || isStartingLearning || startGate.isPending) return
+    setIsStartingLearning(true)
+
+    try {
+      const shouldPlay = await startGate.onAction()
+      if (shouldPlay) {
+        await videoRef.current?.play().catch(() => undefined)
+      }
+    } finally {
+      setIsStartingLearning(false)
+    }
+  }
+
+  const isPreparingPlayback = Boolean(startGate) || isLoadingProgress || isRestoringPosition
+  const isGatePending = isStartingLearning || startGate?.isPending
 
   return (
     <div className={`player lesson-video-player ${isPlaying ? 'player--playing' : ''}`}>
@@ -132,7 +161,8 @@ export function LessonVideoPlayer({ lesson, isLoadingProgress, isRefreshingSourc
       </video>
       <div className="player__top"><span>LESSON {lesson.id}</span><span>{formatPlaybackTime(savedPositionSeconds)} 已觀看</span></div>
       {!hasMediaError && !isPreparingPlayback && <button className="play-button" type="button" aria-label={isPlaying ? '暫停影片' : '播放影片'} onClick={handleTogglePlayback}><i /></button>}
-      {!hasMediaError && isPreparingPlayback && <div className="lesson-video-player__restoring" role="status"><span aria-hidden="true" /><p>{isLoadingProgress ? '正在取得上次進度…' : '正在接續上次進度…'}</p></div>}
+      {!hasMediaError && startGate && <div className="lesson-video-player__gate"><div><span className="lesson-video-player__gate-eyebrow">{startGate.eyebrow}</span><h2>{startGate.title}</h2><p>{startGate.description}</p>{startGate.error && <p className="lesson-video-player__gate-error" role="alert">{startGate.error}</p>}<button type="button" disabled={isGatePending} onClick={() => void handleStartLearning()}>{isGatePending ? startGate.pendingLabel ?? '處理中…' : startGate.actionLabel}</button></div></div>}
+      {!hasMediaError && !startGate && (isLoadingProgress || isRestoringPosition) && <div className="lesson-video-player__restoring" role="status"><span aria-hidden="true" /><p>{isLoadingProgress ? '正在取得上次進度…' : '正在接續上次進度…'}</p></div>}
       {hasMediaError && <div className="lesson-video-player__error" role="alert"><p>影片授權可能已過期，請重新取得播放連結。</p><button type="button" disabled={isRefreshingSource} onClick={handleRetry}>{isRefreshingSource ? '重新取得中…' : '重新取得播放連結'}</button></div>}
     </div>
   )
