@@ -7,7 +7,7 @@ const environmentSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65_535).default(3001),
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(32),
-  CORS_ORIGIN: z.string().url(),
+  CORS_ORIGIN: z.string().url().optional(),
   PUBLIC_API_BASE_URL: z.string().url().optional(),
   CONTENT_STORAGE_ROOT: z.string().trim().min(1).optional(),
   CONTENT_SIGNING_SECRET: z.string().min(32).optional(),
@@ -23,7 +23,7 @@ export type AppConfig = {
   port: number
   databaseUrl: string
   jwtSecret: string
-  corsOrigin: string
+  corsOrigin: string | null
   publicApiBaseUrl: string
   contentStorageRoot: string
   contentSigningSecret: string
@@ -51,7 +51,7 @@ export function loadConfig(environment = process.env): AppConfig {
     port: parsed.data.PORT,
     databaseUrl: parsed.data.DATABASE_URL,
     jwtSecret: parsed.data.JWT_SECRET,
-    corsOrigin: parsed.data.CORS_ORIGIN,
+    corsOrigin: parsed.data.CORS_ORIGIN ?? null,
     publicApiBaseUrl: parsed.data.PUBLIC_API_BASE_URL ?? `http://127.0.0.1:${parsed.data.PORT}/api/v1`,
     contentStorageRoot: resolve(parsed.data.CONTENT_STORAGE_ROOT ?? 'storage/private'),
     contentSigningSecret: parsed.data.CONTENT_SIGNING_SECRET ?? parsed.data.JWT_SECRET,

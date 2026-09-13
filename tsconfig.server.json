@@ -13,5 +13,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["server", "src/contracts"]
+  "include": ["api", "server", "src/contracts"]
 }

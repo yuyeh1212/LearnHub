@@ -4,6 +4,7 @@ import type { Pool } from 'pg'
 import type { AppConfig } from './config.js'
 import { createAuthRouter } from './auth/auth.router.js'
 import { PostgresAuthRepository } from './auth/auth.repository.js'
+import { asyncHandler } from './http/async-handler.js'
 import { ProblemError, problemHandler, requestContext } from './http/problem.js'
 import { LearningRepository } from './learning/learning.repository.js'
 import { createLearningRouter } from './learning/learning.router.js'
@@ -47,12 +48,19 @@ export function createApp({
 
   app.disable('x-powered-by')
   app.use(requestContext)
-  app.use(cors({ origin: corsOrigin, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }))
+  if (corsOrigin) {
+    app.use(cors({ origin: corsOrigin, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }))
+  }
   app.use(express.json({ limit: '32kb' }))
 
-  app.get('/health', (_request, response) => {
+  app.get(['/health', '/api/v1/health'], (_request, response) => {
     response.status(200).json({ status: 'ok' })
   })
+
+  app.get(['/ready', '/api/v1/ready'], asyncHandler(async (_request, response) => {
+    await pool.query('SELECT 1')
+    response.status(200).json({ status: 'ready' })
+  }))
 
   const contentAccessService = new ContentAccessService({
     publicApiBaseUrl,

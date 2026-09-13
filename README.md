@@ -27,4 +27,4 @@ LearnHub 是 React + Vite 前端與 Express + PostgreSQL API 組成的學習平�
 - 影片與教材以短效簽章 URL 交付，實際儲存位置不會進入前端 bundle 或 API DTO。
 - PostgreSQL migration 與本機 seed 目前仍需手動執行。
 - 「我的學習」會整理已加入課程、最近單元與完成比例，讓學員能接續上次進度。
-- 私有內容支援本機檔案與 Supabase Storage；部署自動化仍待下一階段完成。
+- 私有內容支援本機檔案與 Supabase Storage；Vercel 首次部署設定請見 [`docs/vercel-deployment.md`](docs/vercel-deployment.md)。
