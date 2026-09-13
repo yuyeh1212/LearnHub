@@ -22,6 +22,7 @@ LearnHub 使用 Vite 靜態前端與同網域 Vercel Function。`api/[...path].t
 | `VITE_API_BASE_URL` | `/api/v1` |
 | `CONTENT_STORAGE_DRIVER` | `supabase` |
 | `CONTENT_ACCESS_TTL_SECONDS` | `900` |
+| `CRON_SECRET` | 至少 16 字元的隨機值；Vercel Cron 會用 `Authorization: Bearer <CRON_SECRET>` 呼叫 heartbeat |
 | `SUPABASE_URL` | Supabase Project URL |
 | `SUPABASE_SECRET_KEY` | Supabase server-side secret key |
 | `SUPABASE_STORAGE_BUCKET` | `learnhub-content` |
@@ -36,5 +37,6 @@ LearnHub 使用 Vite 靜態前端與同網域 Vercel Function。`api/[...path].t
 4. 註冊一個展示帳戶，加入課程並完成一個單元。
 5. 回到「我的學習」，確認課程、目前單元與完成比例同步更新。
 6. 播放影片並下載教材，確認 Supabase Storage 的短效連結正常。
+7. 在 Vercel Cron Jobs 確認 `/api/v1/cron/supabase-heartbeat` 有排程；若手動測試，必須帶上 `Authorization: Bearer <CRON_SECRET>`。
 
 若 Production 部署無法通過健康檢查或完整學習流程，先在 Vercel Deployments 中將上一個正常部署設為 Production，不要在故障版本上直接修改資料庫。
