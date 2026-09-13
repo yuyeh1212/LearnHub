@@ -13,6 +13,7 @@ test('blank optional deployment variables are treated as unset', () => {
     CONTENT_SIGNING_SECRET: '',
     CRON_SECRET: '',
     CONTENT_STORAGE_DRIVER: 'supabase',
+    PASSWORD_RESET_DEBUG_RESPONSE: '',
     SUPABASE_URL: 'https://example.supabase.co',
     SUPABASE_SECRET_KEY: 'server-only-secret',
   })
@@ -21,5 +22,6 @@ test('blank optional deployment variables are treated as unset', () => {
   assert.equal(config.publicApiBaseUrl, 'http://127.0.0.1:3001/api/v1')
   assert.equal(config.contentSigningSecret, jwtSecret)
   assert.equal(config.cronSecret, null)
+  assert.equal(config.passwordResetDebugResponse, true)
   assert.equal(config.supabaseStorageBucket, 'learnhub-content')
 })

@@ -23,6 +23,7 @@ LearnHub 使用 Vite 靜態前端與同網域 Vercel Function。`api/[...path].t
 | `CONTENT_STORAGE_DRIVER` | `supabase` |
 | `CONTENT_ACCESS_TTL_SECONDS` | `900` |
 | `CRON_SECRET` | 至少 16 字元的隨機值；Vercel Cron 會用 `Authorization: Bearer <CRON_SECRET>` 呼叫 heartbeat |
+| `PASSWORD_RESET_DEBUG_RESPONSE` | Beta 手動測試可暫設 `true`；公開 production 建議設 `false`，等寄信服務接上後由 email 傳遞重設連結 |
 | `SUPABASE_URL` | Supabase Project URL |
 | `SUPABASE_SECRET_KEY` | Supabase server-side secret key |
 | `SUPABASE_STORAGE_BUCKET` | `learnhub-content` |
@@ -35,8 +36,9 @@ LearnHub 使用 Vite 靜態前端與同網域 Vercel Function。`api/[...path].t
 2. 開啟 `/api/v1/health`，應回傳 `{ "status": "ok" }`。
 3. 開啟 `/api/v1/ready`，應回傳 `{ "status": "ready" }`。
 4. 註冊一個展示帳戶，加入課程並完成一個單元。
-5. 回到「我的學習」，確認課程、目前單元與完成比例同步更新。
-6. 播放影片並下載教材，確認 Supabase Storage 的短效連結正常。
-7. 在 Vercel Cron Jobs 確認 `/api/v1/cron/supabase-heartbeat` 有排程；若手動測試，必須帶上 `Authorization: Bearer <CRON_SECRET>`。
+5. 在登入視窗點「忘記密碼？」，確認 Beta 測試模式可完成新密碼設定，再用新密碼登入。
+6. 回到「我的學習」，確認課程、目前單元與完成比例同步更新。
+7. 播放影片並下載教材，確認 Supabase Storage 的短效連結正常。
+8. 在 Vercel Cron Jobs 確認 `/api/v1/cron/supabase-heartbeat` 有排程；若手動測試，必須帶上 `Authorization: Bearer <CRON_SECRET>`。
 
 若 Production 部署無法通過健康檢查或完整學習流程，先在 Vercel Deployments 中將上一個正常部署設為 Production，不要在故障版本上直接修改資料庫。

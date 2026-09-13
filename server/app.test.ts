@@ -14,6 +14,7 @@ function createTestApp(pool: Pool) {
     corsOrigin: 'http://127.0.0.1:4173',
     cronSecret: 'local-test-cron-secret',
     jwtSecret: 'jwt-secret-that-is-at-least-32-characters',
+    passwordResetDebugResponse: true,
     publicApiBaseUrl: 'http://127.0.0.1:3001/api/v1',
     supabaseSecretKey: null,
     supabaseStorageBucket: 'learnhub-content',

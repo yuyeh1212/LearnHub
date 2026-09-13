@@ -1,12 +1,13 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { compare, hash } from 'bcryptjs'
-import type { AuthenticatedUser, AuthenticationResult, UserRole } from '../../src/contracts/auth.js'
+import type { AuthenticatedUser, AuthenticationResult, PasswordResetResult, UserRole } from '../../src/contracts/auth.js'
 import { ProblemError } from '../http/problem.js'
 import type { AuthRepository, UserRecord } from './auth.repository.js'
 import { accessTokenLifetimeSeconds, createAccessToken } from './token.js'
 
 const passwordHashRounds = 12
 const missingUserPasswordHash = hash('not-a-real-password', passwordHashRounds)
+export const passwordResetTokenLifetimeMinutes = 30
 
 export type RegisterInput = {
   email: string
@@ -15,6 +16,15 @@ export type RegisterInput = {
 }
 
 export type LoginInput = Pick<RegisterInput, 'email' | 'password'>
+export type PasswordResetRequestInput = Pick<RegisterInput, 'email'>
+export type PasswordResetInput = {
+  password: string
+  token: string
+}
+export type PasswordResetRequestResult = {
+  expiresInMinutes: number
+  resetToken: string | null
+}
 
 function normalizeEmail(email: string) {
   return email.trim().toLocaleLowerCase('en-US')
@@ -31,6 +41,14 @@ function toAuthenticatedUser(user: UserRecord): AuthenticatedUser {
 
 function isUniqueViolation(error: unknown) {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505'
+}
+
+function createPasswordResetToken() {
+  return randomBytes(32).toString('base64url')
+}
+
+function hashPasswordResetToken(token: string) {
+  return createHash('sha256').update(token, 'utf8').digest('hex')
 }
 
 export class AuthService {
@@ -92,6 +110,48 @@ export class AuthService {
     }
 
     return this.createAuthenticationResult(user)
+  }
+
+  async requestPasswordReset(input: PasswordResetRequestInput): Promise<PasswordResetRequestResult> {
+    const user = await this.repository.findByEmail(normalizeEmail(input.email))
+
+    if (!user) {
+      return {
+        expiresInMinutes: passwordResetTokenLifetimeMinutes,
+        resetToken: null,
+      }
+    }
+
+    const resetToken = createPasswordResetToken()
+    await this.repository.createPasswordResetToken({
+      id: randomUUID(),
+      userId: user.id,
+      tokenHash: hashPasswordResetToken(resetToken),
+      expiresAt: new Date(Date.now() + passwordResetTokenLifetimeMinutes * 60 * 1_000),
+    })
+
+    return {
+      expiresInMinutes: passwordResetTokenLifetimeMinutes,
+      resetToken,
+    }
+  }
+
+  async resetPassword(input: PasswordResetInput): Promise<PasswordResetResult> {
+    const user = await this.repository.resetPasswordWithToken(
+      hashPasswordResetToken(input.token),
+      await hash(input.password, passwordHashRounds),
+    )
+
+    if (!user) {
+      throw new ProblemError({
+        status: 400,
+        code: 'PASSWORD_RESET_TOKEN_INVALID',
+        title: 'Password Reset Token Invalid',
+        detail: 'The password reset link is invalid or has expired.',
+      })
+    }
+
+    return { message: 'Password has been reset. Please sign in with the new password.' }
   }
 
   async getCurrentUser(userId: string): Promise<AuthenticatedUser> {

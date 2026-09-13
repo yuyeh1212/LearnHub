@@ -12,6 +12,7 @@ export function createRuntime(environment = process.env) {
     corsOrigin: config.corsOrigin,
     cronSecret: config.cronSecret,
     jwtSecret: config.jwtSecret,
+    passwordResetDebugResponse: config.passwordResetDebugResponse,
     publicApiBaseUrl: config.publicApiBaseUrl,
     contentStorageRoot: config.contentStorageRoot,
     contentSigningSecret: config.contentSigningSecret,

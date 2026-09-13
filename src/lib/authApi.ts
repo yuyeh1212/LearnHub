@@ -1,4 +1,4 @@
-import type { AuthenticatedUser, AuthenticationResult } from '../contracts/auth'
+import type { AuthenticatedUser, AuthenticationResult, PasswordResetRequestResult, PasswordResetResult } from '../contracts/auth'
 import { notifyAuthSessionExpired } from './authSessionEvents'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:3001/api/v1'
@@ -65,4 +65,12 @@ export function getCurrentUser(accessToken: string) {
   return request<AuthenticatedUser>('/auth/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
   }, { notifyOnUnauthorized: true })
+}
+
+export function requestPasswordReset(input: { email: string }) {
+  return request<PasswordResetRequestResult>('/auth/password-reset-requests', jsonRequest(input))
+}
+
+export function resetPassword(input: { password: string; token: string }) {
+  return request<PasswordResetResult>('/auth/password-resets', jsonRequest(input))
 }

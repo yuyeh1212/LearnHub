@@ -11,7 +11,10 @@
 .authentication-dialog input:focus { border-color: var(--color-primary); outline: 3px solid rgb(29 78 216 / 0.15); }
 .authentication-dialog form .button { width: 100%; margin-top: var(--space-2); }
 .authentication-dialog__hint, .authentication-dialog__switch { margin: 0; color: var(--color-text-muted); font-size: 0.78rem; }
-.authentication-dialog__error { margin: 0; padding: var(--space-3); border-radius: var(--radius-control); color: #a61b32; background: #fff1f2; font-size: 0.82rem; line-height: 1.5; }
+.authentication-dialog__error, .authentication-dialog__success { margin: 0; padding: var(--space-3); border-radius: var(--radius-control); font-size: 0.82rem; line-height: 1.5; }
+.authentication-dialog__error { color: #a61b32; background: #fff1f2; }
+.authentication-dialog__success { color: #067b71; background: var(--color-secondary-soft); }
 .authentication-dialog__switch { margin-top: var(--space-6); text-align: center; }
+.authentication-dialog__switch--secondary { margin-top: var(--space-3); }
 .authentication-dialog__switch button { border: 0; padding: 0; color: var(--color-primary); background: transparent; font: inherit; font-weight: 800; }
 @media (max-width: 420px) { .authentication-dialog__panel { padding: var(--space-6); } }

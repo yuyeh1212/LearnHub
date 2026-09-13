@@ -26,6 +26,7 @@ type AppDependencies = Pick<AppConfig,
   | 'corsOrigin'
   | 'cronSecret'
   | 'jwtSecret'
+  | 'passwordResetDebugResponse'
   | 'publicApiBaseUrl'
   | 'supabaseSecretKey'
   | 'supabaseStorageBucket'
@@ -39,6 +40,7 @@ export function createApp({
   corsOrigin,
   cronSecret,
   jwtSecret,
+  passwordResetDebugResponse,
   publicApiBaseUrl,
   contentStorageRoot,
   contentSigningSecret,
@@ -93,6 +95,7 @@ export function createApp({
   }
 
   app.use('/api/v1/auth', createAuthRouter({
+    passwordResetDebugResponse,
     repository: new PostgresAuthRepository(pool),
     jwtSecret,
   }))

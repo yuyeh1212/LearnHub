@@ -14,6 +14,7 @@ const environmentSchema = z.object({
   CONTENT_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
   CONTENT_STORAGE_DRIVER: z.enum(['local', 'supabase']).default('local'),
   CRON_SECRET: z.string().min(16).optional(),
+  PASSWORD_RESET_DEBUG_RESPONSE: z.enum(['true', 'false']).optional(),
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_SECRET_KEY: z.string().min(1).optional(),
   SUPABASE_STORAGE_BUCKET: z.string().regex(/^[a-z0-9][a-z0-9._-]{1,99}$/).default('learnhub-content'),
@@ -31,6 +32,7 @@ export type AppConfig = {
   contentAccessTtlSeconds: number
   contentStorageDriver: 'local' | 'supabase'
   cronSecret: string | null
+  passwordResetDebugResponse: boolean
   supabaseUrl: string | null
   supabaseSecretKey: string | null
   supabaseStorageBucket: string
@@ -66,6 +68,9 @@ export function loadConfig(environment = process.env): AppConfig {
     contentAccessTtlSeconds: parsed.data.CONTENT_ACCESS_TTL_SECONDS,
     contentStorageDriver: parsed.data.CONTENT_STORAGE_DRIVER,
     cronSecret: parsed.data.CRON_SECRET ?? null,
+    passwordResetDebugResponse: parsed.data.PASSWORD_RESET_DEBUG_RESPONSE
+      ? parsed.data.PASSWORD_RESET_DEBUG_RESPONSE === 'true'
+      : parsed.data.NODE_ENV !== 'production',
     supabaseUrl: parsed.data.SUPABASE_URL ?? null,
     supabaseSecretKey: parsed.data.SUPABASE_SECRET_KEY ?? null,
     supabaseStorageBucket: parsed.data.SUPABASE_STORAGE_BUCKET,

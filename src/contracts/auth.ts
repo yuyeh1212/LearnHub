@@ -13,3 +13,13 @@ export interface AuthenticationResult {
   expiresInSeconds: number
   user: AuthenticatedUser
 }
+
+export interface PasswordResetRequestResult {
+  expiresInMinutes: number
+  message: string
+  resetToken?: string
+}
+
+export interface PasswordResetResult {
+  message: string
+}
