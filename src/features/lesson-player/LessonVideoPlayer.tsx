@@ -8,11 +8,12 @@ interface LessonVideoPlayerProps {
   isRefreshingSource: boolean
   savedPositionSeconds: number
   onEnded: () => void
+  onPause: () => void
   onPositionChange: (seconds: number) => void
   onRefreshSource: () => void
 }
 
-export function LessonVideoPlayer({ lesson, isRefreshingSource, savedPositionSeconds, onEnded, onPositionChange, onRefreshSource }: LessonVideoPlayerProps) {
+export function LessonVideoPlayer({ lesson, isRefreshingSource, savedPositionSeconds, onEnded, onPause, onPositionChange, onRefreshSource }: LessonVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const lastSavedPosition = useRef(Math.floor(savedPositionSeconds))
   const [isPlaying, setIsPlaying] = useState(false)
@@ -72,6 +73,12 @@ export function LessonVideoPlayer({ lesson, isRefreshingSource, savedPositionSec
     onEnded()
   }
 
+  const handlePause = () => {
+    setIsPlaying(false)
+    handleTimeUpdate()
+    onPause()
+  }
+
   return (
     <div className={`player lesson-video-player ${isPlaying ? 'player--playing' : ''}`}>
       <video
@@ -84,7 +91,7 @@ export function LessonVideoPlayer({ lesson, isRefreshingSource, savedPositionSec
         onEnded={handleEnded}
         onError={() => setHasMediaError(true)}
         onLoadedMetadata={handleLoadedMetadata}
-        onPause={() => setIsPlaying(false)}
+        onPause={handlePause}
         onPlay={() => setIsPlaying(true)}
         onTimeUpdate={handleTimeUpdate}
       >

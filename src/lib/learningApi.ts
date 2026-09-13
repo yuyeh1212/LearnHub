@@ -32,16 +32,18 @@ export class LearningApiError extends Error {
 type RequestOptions = {
   accessToken?: string
   body?: unknown
+  keepalive?: boolean
   method?: 'GET' | 'PATCH' | 'POST' | 'PUT'
   signal?: AbortSignal
 }
 
-async function request<T>(path: string, { accessToken, body, method = 'GET', signal }: RequestOptions = {}): Promise<T> {
+async function request<T>(path: string, { accessToken, body, keepalive, method = 'GET', signal }: RequestOptions = {}): Promise<T> {
   let response: Response
 
   try {
     response = await fetch(`${apiBaseUrl}${path}`, {
       method,
+      keepalive,
       signal,
       headers: {
         ...(body ? { 'Content-Type': 'application/json' } : {}),
@@ -99,6 +101,6 @@ export function updateCurrentLesson(courseId: string, input: UpdateCourseProgres
   return request<CourseProgress>(`/me/course-progress/${encodeURIComponent(courseId)}`, { accessToken, body: input, method: 'PATCH' })
 }
 
-export function updateLessonProgress(lessonId: string, input: UpsertLessonProgressInput, accessToken: string) {
-  return request<LessonProgress>(`/me/lesson-progress/${encodeURIComponent(lessonId)}`, { accessToken, body: input, method: 'PUT' })
+export function updateLessonProgress(lessonId: string, input: UpsertLessonProgressInput, accessToken: string, keepalive = false) {
+  return request<LessonProgress>(`/me/lesson-progress/${encodeURIComponent(lessonId)}`, { accessToken, body: input, keepalive, method: 'PUT' })
 }

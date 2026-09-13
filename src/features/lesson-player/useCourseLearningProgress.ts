@@ -86,7 +86,7 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
     return () => controller.abort()
   }, [accessToken, applyProgress, courseId])
 
-  const flushPendingWrites = useCallback(async () => {
+  const flushPendingWrites = useCallback(async (keepalive = false) => {
     if (!accessToken || accessState !== 'enrolled') return
     const pendingWrites = [...pendingWritesRef.current.entries()]
     pendingWritesRef.current.clear()
@@ -99,15 +99,29 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
       lessonId,
       progress,
       accessToken,
+      keepalive,
     )))
     if (results.some((result) => result.status === 'rejected')) {
       setSyncError('觀看位置暫時無法同步，請保持頁面開啟後再試一次。')
     }
   }, [accessState, accessToken])
 
-  useEffect(() => () => {
-    if (writeTimerRef.current) window.clearTimeout(writeTimerRef.current)
-  }, [])
+  useEffect(() => {
+    const flushBeforeLeaving = () => { void flushPendingWrites(true) }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushBeforeLeaving()
+    }
+
+    window.addEventListener('pagehide', flushBeforeLeaving)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('pagehide', flushBeforeLeaving)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (writeTimerRef.current) window.clearTimeout(writeTimerRef.current)
+      void flushPendingWrites()
+    }
+  }, [flushPendingWrites])
 
   const queueProgressWrite = useCallback((lessonId: string, progress: PendingLessonProgress) => {
     if (!accessToken || accessState !== 'enrolled') return
@@ -132,13 +146,17 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
     const next = { ...lessonPositionSecondsRef.current, [lessonId]: positionSeconds }
     lessonPositionSecondsRef.current = next
     setLessonPositionSeconds(next)
-    if (positionSeconds > 0 && positionSeconds % 5 === 0) {
+    if (positionSeconds > 0) {
       queueProgressWrite(lessonId, {
         completed: completedLessonIdsRef.current.includes(lessonId),
         positionSeconds,
       })
     }
   }, [queueProgressWrite])
+
+  const flushProgress = useCallback(() => {
+    void flushPendingWrites()
+  }, [flushPendingWrites])
 
   const setLessonCompletion = useCallback((lessonId: string, completed: boolean) => {
     const next = completed
@@ -177,6 +195,7 @@ export function useCourseLearningProgress(courseId: string, lessonIds: string[],
     completedLessonIds,
     currentLessonId,
     enroll,
+    flushProgress,
     isEnrolling,
     lessonPositionSeconds,
     saveLessonPosition,
