@@ -15,7 +15,7 @@ interface LandingPageProps {
 
 export function LandingPage({ authUser, onRegister, onSignIn, onSignOut }: LandingPageProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const { courses, error, isLoading, retry } = useCourseCatalog(searchQuery)
+  const { activeQuery, courses, error, hasMore, isLoading, isLoadingMore, loadMore, loadMoreError, retry } = useCourseCatalog(searchQuery)
   const firstCourse = courses[0]
 
   const handleSearchSubmit = () => {
@@ -40,7 +40,7 @@ export function LandingPage({ authUser, onRegister, onSignIn, onSignOut }: Landi
               <div className="hero__actions"><a href="#explore"><Button>探索所有課程</Button></a></div>
             </div>
             <div className="hero-map" aria-label="職涯學習路徑示意">
-              <div className="hero-map__topline"><span>課程資料即時載入</span><span>{isLoading ? '同步中' : `共 ${courses.length} 門課程`}</span></div>
+              <div className="hero-map__topline"><span>課程資料即時載入</span><span>{isLoading ? '同步中' : `已載入 ${courses.length} 門課程`}</span></div>
               <div className="hero-map__route"><div className="route-node route-node--done"><b>01</b><span>探索方向</span></div><div className="route-line route-line--done" /><div className="route-node route-node--active"><b>02</b><span>開始學習</span></div><div className="route-line" /><div className="route-node"><b>03</b><span>累積成果</span></div></div>
               {firstCourse ? <div className="hero-map__lesson"><div className="lesson-signal" aria-hidden="true"><i /><i /><i /><i /></div><div><small>推薦課程</small><strong>{firstCourse.title}</strong></div><a href={`#lesson/${firstCourse.id}`}>開始</a></div> : <p className="hero-map__empty">課程準備完成後會顯示在這裡。</p>}
             </div>
@@ -48,13 +48,19 @@ export function LandingPage({ authUser, onRegister, onSignIn, onSignOut }: Landi
 
           <section className="courses-section" id="explore" aria-labelledby="courses-title">
             <div className="section-heading section-heading--inline"><div><p className="eyebrow">精選課程</p><h2 id="courses-title">用真實工作情境，把能力練得更扎實</h2></div><a href="#explore">探索課程目錄 →</a></div>
-            {searchQuery.trim() && !isLoading && !error && <p className="course-search-status" role="status">{courses.length ? `找到 ${courses.length} 門與「${searchQuery.trim()}」相關的課程。` : `找不到與「${searchQuery.trim()}」相關的課程。`}</p>}
+            {activeQuery && !isLoading && !error && <p className="course-search-status" role="status">{courses.length ? `已載入 ${courses.length} 門與「${activeQuery}」相關的課程。` : `找不到與「${activeQuery}」相關的課程。`}</p>}
             <div aria-labelledby="courses-title" className="course-grid" id="featured-course-results" tabIndex={-1}>
               {isLoading && <div className="course-search-empty" role="status"><h3>正在載入課程</h3><p>請稍候，正在取得最新課程內容。</p></div>}
               {error && <div className="course-search-empty" role="alert"><h3>暫時無法取得課程</h3><p>{error}</p><button type="button" onClick={retry}>重新整理課程</button></div>}
               {!isLoading && !error && courses.length > 0 && courses.map((course) => <CourseCard key={course.id} course={course} />)}
               {!isLoading && !error && courses.length === 0 && <div className="course-search-empty"><h3>沒有符合的課程</h3><p>試試看搜尋 React、資料分析或 UX。</p></div>}
             </div>
+            {!isLoading && !error && courses.length > 0 && (hasMore || loadMoreError) && (
+              <div className="course-load-more" aria-live="polite">
+                {loadMoreError && <p className="course-load-more__error" role="alert">{loadMoreError}</p>}
+                {hasMore && <button type="button" disabled={isLoadingMore} onClick={loadMore}>{isLoadingMore ? '正在載入更多課程…' : '載入更多課程'}</button>}
+              </div>
+            )}
           </section>
 
         </main>

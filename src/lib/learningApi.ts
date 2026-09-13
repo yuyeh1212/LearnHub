@@ -71,10 +71,16 @@ async function request<T>(path: string, { accessToken, body, keepalive, method =
   return response.json() as Promise<T>
 }
 
-export function listCourses(query: Pick<CourseListQuery, 'query'>, signal?: AbortSignal) {
+export function listCourses(query: Pick<CourseListQuery, 'cursor' | 'limit' | 'query'>, signal?: AbortSignal) {
   const search = new URLSearchParams()
   if (query.query?.trim()) {
     search.set('query', query.query.trim())
+  }
+  if (query.cursor) {
+    search.set('cursor', query.cursor)
+  }
+  if (query.limit) {
+    search.set('limit', String(query.limit))
   }
 
   const suffix = search.size ? `?${search.toString()}` : ''
